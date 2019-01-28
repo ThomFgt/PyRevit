@@ -108,6 +108,18 @@ import Autodesk
 #     siteloc_elevation_link = proj.SiteLocation.Elevation
 #     siteloc_placename_link = proj.SiteLocation.PlaceName
 
+# print siteloc_elements_link, projectloc_name_link, siteloc_longitude_link, siteloc_latitude_link, siteloc_elevation_link, siteloc_placename_link
+
+projectloc_category_maq = db.Collector(of_class='ProjectLocation')
+projectloc_elements_maq = projectloc_category_maq.get_elements()
+for proj in projectloc_elements_maq:
+  if proj.Name != "Projet" : 
+    siteloc_longitude_maq = [proj.SiteLocation.Longitude for proj in projectloc_elements_maq]
+    siteloc_latitude_maq = [proj.SiteLocation.Latitude for proj in projectloc_elements_maq]
+    siteloc_elevation_maq = [proj.SiteLocation.Elevation for proj in projectloc_elements_maq]
+    siteloc_placename_maq = [proj.SiteLocation.PlaceName for proj in projectloc_elements_maq] 
+
+print(projectloc_category_maq, projectloc_elements_maq, siteloc_longitude_maq, siteloc_latitude_maq, siteloc_elevation_maq, siteloc_placename_maq)
 
 # # COLLECT LEVELS MAQUETTE
 # level_category = db.Collector(of_category='Levels', is_not_type=True)
