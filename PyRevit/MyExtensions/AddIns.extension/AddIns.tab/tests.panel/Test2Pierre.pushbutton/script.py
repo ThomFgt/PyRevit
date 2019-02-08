@@ -392,4 +392,4 @@ def setParam(param, value):
 # # 	res2 = TaskDialog.Show("Mise au propre","Veuillez checker la non superposition des "+e_a+"tiquettes pour un r"+e_a+"sultat plus lisible!",td_button2)
 				
 # # else:
-# # 	print("Une autre fois peut-etre...")
+# #   print("Une autre fois peut-etre...")

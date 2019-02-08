@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # IMPORT
 import clr
 import System 
@@ -9,179 +10,176 @@ from System.Runtime.InteropServices import Marshal
 import sys
 import Autodesk
 
+e_a = str("\xe9")
+a_a = str("\xe0")
 
 
 
-# # USERFORM BIM CHECKER
-
-# components = [Label('Check a choisir'),
-#               CheckBox('checkbox1', 'Verifier le nom de la maquette'),
-#               CheckBox('checkbox2', 'Verifier si la maquette est centrale ou local'),
-#               CheckBox('checkbox3', 'Verifier le nombre de groupe dans la maquette' ),
-#               CheckBox('checkbox4', 'Verifier emplacement partage'),
-#               CheckBox('checkbox5', 'Verifier le point de base'),
-#               CheckBox('checkbox6', 'Verifier les niveaux'),
-#               CheckBox('checkbox7', 'Verifier les quadrillages'),
-#               CheckBox('checkbox8', 'Verifier les avertissements'),
-#               CheckBox('checkbox9', 'Verifier si chaque vue est utilisee pour une vue en plan'),
-#               CheckBox('checkbox10', 'Verifier le poids de la maquette'),
-#               CheckBox('checkbox11', 'Verifier la version Revit'),
-#               Label('Version Revit'),
-#               ComboBox('combobox1', {'2015':2015, '2016':2016, '2017':2017, '2018':2018, '2019':2019}),
-#               Label('Nom maquette exacte'),
-#               TextBox('textbox1', Text="EXEMPLE_MAQUETTE.rvt"),
-#               Label('Poids maximum maquette'),
-#               ComboBox('combobox2', {'150':150, '200':200, '250':250, '300':300, '350':350, '400':400, '450':450}),
-#               Label('choisir maquette QNP'),
-#               Button(button_text='QNP'),             
-#               Label('choisir visa Excel'),
-#               Button(button_text='VISA BIM'),
-#               Separator(), 
-#               Button('OK GO'),]
-# form = FlexForm('BIM CHECKER DU FUTUR', components)
-# form.show()
+# INSERT LINK
+# User select a revit file in folders
+filepath = select_file('Revit Model (*.rvt)|*.rvt')
+#start transaction
+with db.Transaction('insert link'):
+  for path in filepath:
+    linkpath = DB.ModelPathUtils.ConvertUserVisiblePathToModelPath(filepath)   
+  linkoptions = DB.RevitLinkOptions(relative=True)
+  linkloadresult = DB.RevitLinkType.Create(revit.doc, linkpath, linkoptions)
+  linkinstance = DB.RevitLinkInstance.Create(revit.doc, linkloadresult.ElementId)
+  # # Insert from Base Point to Base Point
+  # DB.RevitLinkInstance.MoveBasePointToHostBasePoint(linkinstance, resetToOriginalRotation = True)
+  # # Insert from Origin To Origin
+  # DB.RevitLinkInstance.MoveOriginToHostOrigin(linkinstance, resetToOriginalRotation = True)
 
 
-# # /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-# # INSERT LINK
-# # User select a revit file in folders
-# filepath = select_file('Revit Model (*.rvt)|*.rvt')
-# #start transaction
-# with db.Transaction('insert link'):
-#   for path in filepath:
-#     linkpath = DB.ModelPathUtils.ConvertUserVisiblePathToModelPath(filepath)   
-#   linkoptions = DB.RevitLinkOptions(relative=True)
-#   linkloadresult = DB.RevitLinkType.Create(revit.doc, linkpath, linkoptions)
-#   linkinstance = DB.RevitLinkInstance.Create(revit.doc, linkloadresult.ElementId)
-#   # # Insert from Base Point to Base Point
-#   # DB.RevitLinkInstance.MoveBasePointToHostBasePoint(linkinstance, resetToOriginalRotation = True)
-#   # # Insert from Origin To Origin
-#   # DB.RevitLinkInstance.MoveOriginToHostOrigin(linkinstance, resetToOriginalRotation = True)
-
-# # ACQUIRE COORDINATES FROM REVIT LINK
-# collector_maq = DB.FilteredElementCollector(revit.doc)
-# linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
-# linkDoc = [links.GetLinkDocument() for links in linkInstances]
-# collector_link = DB.FilteredElementCollector(linkDoc[0])
-# linkInstancesId = linkInstances.ToElementIds()
-# with db.Transaction('acquire coordinates'):
-#   DB.Document.AcquireCoordinates(revit.doc, linkInstancesId[0])
+# ACQUIRE COORDINATES FROM REVIT LINK
+collector_maq = DB.FilteredElementCollector(revit.doc)
+linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
+linkDoc = [links.GetLinkDocument() for links in linkInstances]
+collector_link = DB.FilteredElementCollector(linkDoc[0])
+linkInstancesId = linkInstances.ToElementIds()
+# SET COORDINATE TO MAQUETTE
+with db.Transaction('set acquire coordinates'):
+  DB.Document.AcquireCoordinates(revit.doc, linkInstancesId[0])
  
 
+
+# GET SITE LOCATION LINK
+collector_maq = DB.FilteredElementCollector(revit.doc)
+linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
+linkDoc = [links.GetLinkDocument() for links in linkInstances]
+collector_link = DB.FilteredElementCollector(linkDoc[0])
+
+projectloc_elements_link = collector_link.OfClass(DB.ProjectLocation).ToElements()
+for proj in projectloc_elements_link:
+  if proj.Name != "Projet" and proj.Name != "Interne":
+    projectloc_name_link = proj.Name
+  else :
+    projectloc_name_link = "Georef"
+
+
+# RENAME PROJECT LOCATION MAQUETTE
+projectloc_category_maq = db.Collector(of_class='ProjectLocation')
+projectloc_elements_maq = projectloc_category_maq.get_elements()
+for proj in projectloc_elements_maq:
+  if proj.Name != "Projet":
+    with db.Transaction('rename project location'):
+	  proj.Name = projectloc_name_link
+
+
+
+# GET BASE POINT LINK
+collector_maq = DB.FilteredElementCollector(revit.doc)
+linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
+linkDoc = [links.GetLinkDocument() for links in linkInstances]
+collector_link = DB.FilteredElementCollector(linkDoc[0])
+
+basepoint_elements_link = collector_link.OfCategory(DB.BuiltInCategory.OST_ProjectBasePoint).ToElements()
+basepoint_nordsud_link = [bp.LookupParameter("N/S").AsDouble() for bp in basepoint_elements_link]
+basepoint_estouest_link = [bp.LookupParameter("E/O").AsDouble() for bp in basepoint_elements_link]
+basepoint_elevation_link = [bp.LookupParameter("El"+e_a+"v.").AsDouble() for bp in basepoint_elements_link]
+basepoint_angle_link = [bp.LookupParameter("Angle par rapport au nord g"+e_a+"ographique").AsDouble() for bp in basepoint_elements_link]
+
+
+# SET BASE POINT MAQUETTE
+basepoint_category = db.Collector(of_category='OST_ProjectBasePoint', is_not_type = True)
+basepoint_elements = basepoint_category.get_elements()
+with db.Transaction('set base point'):  
+  for bp in basepoint_elements:
+    bp.Pinned = False
+    bp.get_Parameter(DB.BuiltInParameter.BASEPOINT_NORTHSOUTH_PARAM).Set(basepoint_nordsud_link[0])
+    bp.get_Parameter(DB.BuiltInParameter.BASEPOINT_EASTWEST_PARAM).Set(basepoint_estouest_link[0])
+    bp.get_Parameter(DB.BuiltInParameter.BASEPOINT_ELEVATION_PARAM).Set(basepoint_elevation_link[0])
+    bp.get_Parameter(DB.BuiltInParameter.BASEPOINT_ANGLETON_PARAM).Set(basepoint_angle_link[0])
+
+
+
+# COLLECT LEVELS MAQUETTE
+level_category = db.Collector(of_category='Levels', is_not_type=True)
+level_elements = level_category.get_elements()
+level_name = [levels.LookupParameter("Nom").AsString() for levels in level_elements]
+level_elevation = [levels.Elevation for levels in level_elements]
+level_id = [levels.Id for levels in level_elements]
+
+
+# COLLECT GRIDS MAQUETTE
+grid_category = db.Collector(of_category='OST_Grids', is_not_type=True)
+grid_elements = grid_category.get_elements()
+
+
+# COLLECT LEVELS LINK
+collector_maq = DB.FilteredElementCollector(revit.doc)
+linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
+linkDoc = [links.GetLinkDocument() for links in linkInstances]
+collector_link = DB.FilteredElementCollector(linkDoc[0])
+
+level_elements_link = collector_link.OfClass(DB.Level).ToElements()
+level_name_link = [levels.LookupParameter("Nom").AsString() for levels in level_elements_link]
+level_elevation_link = [levels.Elevation for levels in level_elements_link]
+level_id_link = [levels.Id for levels in level_elements_link]
+
+
+# COLLECT GRIDS LINK
+collector_maq = DB.FilteredElementCollector(revit.doc)
+linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
+linkDoc = [links.GetLinkDocument() for links in linkInstances]   
+collector_link = DB.FilteredElementCollector(linkDoc[0])
+
+grid_elements_link = collector_link.OfClass(DB.Grid).ToElements()
+grid_name_link = [grids.Name for grids in grid_elements_link]
+grid_length_link = [grids.Curve.Length for grids in grid_elements_link]
+grid_origin_link = [grids.Curve.Origin for grids in grid_elements_link]
+grid_direction_link = [grids.Curve.Direction for grids in grid_elements_link]
+
+
+# COLLECT VIEW FAMILY TYPE
+family_type_category = db.Collector(of_class= 'ViewFamilyType', is_type = True)
+family_type_elements = family_type_category.get_elements()
+family_type_id = [views.Id for views in family_type_elements]
+
+
+
+# CREATE LEVELS FROM THE LINK
+new_level_id = []
+with db.Transaction('create levels'):
+  for k in range(len(level_elements_link)):
+    NewLevel = DB.Level.Create(document = revit.doc, elevation = 0)
+    NewLevel.Name = level_name_link[k]
+    NewLevel.Elevation = level_elevation_link[k]-basepoint_elevation_link[0]
+    new_level_id.append(NewLevel.Id)
+
+
+# CREATE VIEW
+with db.Transaction('create plan views'):
+  newplanview = DB.ViewPlan.Create(revit.doc, family_type_id[0], new_level_id[0])
+# GO TO THE VIEW
+revit.uidoc.ActiveView = newplanview
+UI.UIDocument.RefreshActiveView(revit.uidoc)
+
+
+# CREATE GRIDS FROM THE LINK
+with db.Transaction('create grids'):
+  for k in range(len(grid_elements_link)):
+    start = DB.XYZ(grid_origin_link[k][0],grid_origin_link[k][1],grid_origin_link[k][2])
+    end = DB.XYZ(grid_direction_link[k][0]*grid_length_link[k]+grid_origin_link[k][0], 
+    	         grid_direction_link[k][1]*grid_length_link[k]+grid_origin_link[k][1],
+    	         grid_direction_link[k][2]*grid_length_link[k]+grid_origin_link[k][2])
+    BaseLine = DB.Line.CreateBound(start,end)
+    NewGrid = DB.Grid.Create(document = revit.doc, line = BaseLine)
+    NewGrid.Name = grid_name_link[k]
+
+
+
+# DELETE FIRST LEVELS FROM MAQUETTE
+with db.Transaction('delete levels'):
+  for k in range(len(level_id)):
+    DB.Document.Delete(revit.doc, level_id[k])
+
+
+
+# # OPTION
 # # DELETE LINK
 # with db.Transaction('delete link'):
 #   collector_maq = DB.FilteredElementCollector(revit.doc)
 #   linkedFile = collector_maq.OfCategory(DB.BuiltInCategory.OST_RvtLinks)
 #   linkedFileId = linkedFile.ToElementIds()
 #   DB.Document.Delete(revit.doc, linkedFileId)
-
-
-# # INSERT LINK
-# with db.Transaction('insert link'):
-#   for path in filepath:
-#     linkpath = DB.ModelPathUtils.ConvertUserVisiblePathToModelPath(filepath)   
-#   linkoptions = DB.RevitLinkOptions(relative=True)
-#   linkloadresult = DB.RevitLinkType.Create(revit.doc, linkpath, linkoptions)
-#   linkinstance = DB.RevitLinkInstance.Create(revit.doc, linkloadresult.ElementId)
-#   # # Insert from Base Point to Base Point
-#   # DB.RevitLinkInstance.MoveBasePointToHostBasePoint(linkinstance, resetToOriginalRotation = True)
-#   # # Insert from Origin To Origin
-#   # DB.RevitLinkInstance.MoveOriginToHostOrigin(linkinstance, resetToOriginalRotation = True)
-# # /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
-# # GET SITE LOCATION LINK
-# collector_maq = DB.FilteredElementCollector(revit.doc)
-# linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
-# linkDoc = [links.GetLinkDocument() for links in linkInstances]
-# collector_link = DB.FilteredElementCollector(linkDoc[0])
-
-# siteloc_elements_link = collector_link.OfClass(DB.ProjectLocation).ToElements()
-# projectloc_name_link = [proj.Name for proj in siteloc_elements_link]
-# for proj in siteloc_elements_link:
-#   if proj.Name != "Projet" and proj.Name != "Interne":
-#     siteloc_longitude_link = proj.SiteLocation.Longitude
-#     siteloc_latitude_link = proj.SiteLocation.Latitude
-#     siteloc_elevation_link = proj.SiteLocation.Elevation
-#     siteloc_placename_link = proj.SiteLocation.PlaceName
-
-# print siteloc_elements_link, projectloc_name_link, siteloc_longitude_link, siteloc_latitude_link, siteloc_elevation_link, siteloc_placename_link
-
-projectloc_category_maq = db.Collector(of_class='ProjectLocation')
-projectloc_elements_maq = projectloc_category_maq.get_elements()
-for proj in projectloc_elements_maq:
-  if proj.Name != "Projet" : 
-    siteloc_longitude_maq = [proj.SiteLocation.Longitude for proj in projectloc_elements_maq]
-    siteloc_latitude_maq = [proj.SiteLocation.Latitude for proj in projectloc_elements_maq]
-    siteloc_elevation_maq = [proj.SiteLocation.Elevation for proj in projectloc_elements_maq]
-    siteloc_placename_maq = [proj.SiteLocation.PlaceName for proj in projectloc_elements_maq] 
-
-print(projectloc_category_maq, projectloc_elements_maq, siteloc_longitude_maq, siteloc_latitude_maq, siteloc_elevation_maq, siteloc_placename_maq)
-
-# # COLLECT LEVELS MAQUETTE
-# level_category = db.Collector(of_category='Levels', is_not_type=True)
-# level_elements = level_category.get_elements()
-# level_name = [levels.LookupParameter("Nom").AsString() for levels in level_elements]
-# level_elevation = [levels.Elevation for levels in level_elements]
-# level_id = [levels.Id for levels in level_elements]
-
-# # COLLECT GRIDS MAQUETTE
-# grid_category = db.Collector(of_category='OST_Grids', is_not_type=True)
-# grid_elements = grid_category.get_elements()
-
-# # COLLECT LEVELS LINK
-# collector_maq = DB.FilteredElementCollector(revit.doc)
-# linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
-# linkDoc = [links.GetLinkDocument() for links in linkInstances]
-# collector_link = DB.FilteredElementCollector(linkDoc[0])
-
-# level_elements_link = collector_link.OfClass(DB.Level).ToElements()
-# level_name_link = [levels.LookupParameter("Nom").AsString() for levels in level_elements_link]
-# level_elevation_link = [levels.Elevation for levels in level_elements_link]
-
-# # COLLECT GRIDS LINK
-# collector_maq = DB.FilteredElementCollector(revit.doc)
-# linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
-# linkDoc = [links.GetLinkDocument() for links in linkInstances]   
-# collector_link = DB.FilteredElementCollector(linkDoc[0])
-
-# grid_elements_link = collector_link.OfClass(DB.Grid).ToElements()
-# grid_name_link = [grids.Name for grids in grid_elements_link]
-# grid_length_link = [grids.Curve.Length for grids in grid_elements_link]
-# grid_origin_link = [grids.Curve.Origin for grids in grid_elements_link]
-# grid_direction_link = [grids.Curve.Direction for grids in grid_elements_link]
-
-
-# # CREATE LEVELS
-# with db.Transaction('create levels'):
-#   for k in range(len(level_elements_link)):
-#     NewLevel = DB.Level.Create(document = revit.doc, elevation = 0)
-#     NewLevel.Name = level_name_link[k]
-#     NewLevel.Elevation = level_elevation_link[k]
-
-# # DELETE LEVELS 
-# with db.Transaction('delete levels'):
-#   for levels in level_id:
-#     DB.Document.Delete(revit.doc, levels)
-
-# # CREATE GRIDS
-# with db.Transaction('create grids'):
-#   for k in range(len(grid_elements_link)):
-#     start = db.XYZ(0,0,0)
-#     end = db.XYZ(0,0,0)
-#     BaseLine = db.Line.new([0,0],[1,1])
-#     NewGrid = DB.Grid.Create(document = revit.doc, line = BaseLine)
-#     NewGrid.Name = grid_name_link[k]
-#     NewGrid.Curve.Origin = grid_origin_link[k]
-#     NewGrid.Curve.Length = grid_length_link[k]
-#     NewGrid.Curve.Direction = grid_direction_link[k]
-
-
-
-
-# # OUT
-
-# print siteloc_elements_link, siteloc_elevation_link, siteloc_latitude_link, siteloc_longitude_link, siteloc_placename_link
