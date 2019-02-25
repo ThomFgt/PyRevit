@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+__title__ = 'Create QNP'
+
+__doc__ = "Ce programme copie les niveaux et les quadrillages de la maquette selectionnée. Le point de base et l'emplacement partagé sont aussi importés. Uniquement sur Revit 2018 ou plus."
+
 # IMPORT
 import clr
 import System 
@@ -9,6 +14,7 @@ from System import Array
 from System.Runtime.InteropServices import Marshal
 import sys
 import Autodesk
+
 
 e_a = str("\xe9")
 a_a = str("\xe0")
@@ -124,12 +130,15 @@ linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
 linkDoc = [links.GetLinkDocument() for links in linkInstances]   
 collector_link = DB.FilteredElementCollector(linkDoc[0])
 
-grid_elements_link = collector_link.OfClass(DB.Grid).ToElements()
-grid_name_link = [grids.Name for grids in grid_elements_link]
-grid_length_link = [grids.Curve.Length for grids in grid_elements_link]
-grid_origin_link = [grids.Curve.Origin for grids in grid_elements_link]
-grid_direction_link = [grids.Curve.Direction for grids in grid_elements_link]
-
+try :
+  grid_elements_link = collector_link.OfClass(DB.Grid).ToElements()
+  grid_name_link = [grids.Name for grids in grid_elements_link]
+  grid_length_link = [grids.Curve.Length for grids in grid_elements_link]
+  grid_origin_link = [grids.Curve.Origin for grids in grid_elements_link]
+  grid_direction_link = [grids.Curve.Direction for grids in grid_elements_link]
+except :
+  print("Certains quadrillages sont multi-segments, je ne peux pas les copier")
+    
 
 # COLLECT VIEW FAMILY TYPE
 family_type_category = db.Collector(of_class= 'ViewFamilyType', is_type = True)
@@ -158,14 +167,17 @@ UI.UIDocument.RefreshActiveView(revit.uidoc)
 
 # CREATE GRIDS FROM THE LINK
 with db.Transaction('create grids'):
-  for k in range(len(grid_elements_link)):
-    start = DB.XYZ(grid_origin_link[k][0],grid_origin_link[k][1],grid_origin_link[k][2])
-    end = DB.XYZ(grid_direction_link[k][0]*grid_length_link[k]+grid_origin_link[k][0], 
-    	         grid_direction_link[k][1]*grid_length_link[k]+grid_origin_link[k][1],
-    	         grid_direction_link[k][2]*grid_length_link[k]+grid_origin_link[k][2])
-    BaseLine = DB.Line.CreateBound(start,end)
-    NewGrid = DB.Grid.Create(document = revit.doc, line = BaseLine)
-    NewGrid.Name = grid_name_link[k]
+  try :
+    for k in range(len(grid_elements_link)):
+      start = DB.XYZ(grid_origin_link[k][0],grid_origin_link[k][1],grid_origin_link[k][2])
+      end = DB.XYZ(grid_direction_link[k][0]*grid_length_link[k]+grid_origin_link[k][0], 
+    	          grid_direction_link[k][1]*grid_length_link[k]+grid_origin_link[k][1],
+    	          grid_direction_link[k][2]*grid_length_link[k]+grid_origin_link[k][2])
+      BaseLine = DB.Line.CreateBound(start,end)
+      NewGrid = DB.Grid.Create(document = revit.doc, line = BaseLine)
+      NewGrid.Name = grid_name_link[k]
+  except : 
+      print("Certains quadrillages ont le même nom, il faut que le nom sont unique") 
 
 
 

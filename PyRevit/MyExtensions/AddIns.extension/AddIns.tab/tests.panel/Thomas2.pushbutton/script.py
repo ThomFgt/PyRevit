@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-#crash test2
+
 # IMPORT
 import clr
+import math
 import System 
 import rpw
 from rpw import revit, db, ui, DB, UI
@@ -10,26 +11,54 @@ from System import Array
 from System.Runtime.InteropServices import Marshal
 import sys
 import Autodesk
-# sys.path.append(r"C:\\Program Files (x86)\\Python37-32\\Lib")
-# from tkinter import *
-from pyrevit import script
 
-# e_a = str("\xe9")
-# a_a = str("\xe0")
-# Fenetre = Tk()
-# bouton = Button(Fenetre, text = "quitter", command=Fenetre.destroy)
-# bouton.pack()
-# Fenetre.mainloop()
+
+e_a = str("\xe9")
+a_a = str("\xe0")
 
 
 
+# COLLECT VIEWS
+view_category = db.Collector(of_category = 'OST_Views', is_not_type = True)
+view_element = view_category.get_elements()
+view_id = [views.Id for views in view_element]
+# COLLECT SHEETS
+sheet_category = db.Collector(of_category = 'OST_Sheets', is_not_type = True)
+sheet_element = sheet_category.get_elements()
+sheet_id = [sheets.Id for sheets in sheet_element]
+# SET POINT 
+point = DB.XYZ(1,1,0)
+# PLACE VIEW IN SHEET 
+with db.Transaction('place view in sheet'):
+	DB.Viewport.Create(revit.doc, sheet_id[0], view_id[6], point)
 
 
-output = script.get_output()
 
-output.set_height(600)
-output.get_title()
-output.set_title()
+
+
+
+
+
+
+# # ////////////////////////////////////////////////////////////////////////
+# # COLLECT WORKSETS NAME LINK
+# collector_maq = DB.FilteredElementCollector(revit.doc)
+# linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
+# linkDoc = [links.GetLinkDocument() for links in linkInstances]
+# collector_link = DB.FilteredWorksetCollector(linkDoc[0])
+
+# collect_worksets_link = collector_link.OfKind(DB.WorksetKind.UserWorkset)
+# worksets_name_link = [workset.Name for workset in collect_worksets_link]
+# for workset in worksets_name_link:
+#   print workset
+
+
+# # CREATE WORKSETS IN MAQUETTE
+# with db.Transaction('create worksets'):
+#   for workset in worksets_name_link:
+#     DB.Workset.Create(revit.doc, workset)
+# # ///////////////////////////////////////////////////////////////////////
+
 
 
 
@@ -62,32 +91,6 @@ output.set_title()
 #               Button('OK GO'),]
 # form = FlexForm('BIM CHECKER DU FUTUR', components)
 # form.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
