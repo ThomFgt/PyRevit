@@ -37,6 +37,7 @@ levels = {}
 for level in level_collector:
   levels[level.Name] = level
 
+# Ceci est un super text
 
 components = [Label('Select the floor\'s level :'),
           ComboBox('floor_level', levels),
