@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+__title__ = 'Arborescence\nSynthese'
+
+__doc__ = "Ce programme créé des vues à partir des niveaux existant et les range dans une arborescence. Les paramètres BPS_Arborescence_Lot, BPS_Arborescence_Niveau, BPS_Arborescence_Zone doivent être créés."
+
+
 # IMPORT
 import clr
 import math
@@ -45,10 +50,6 @@ level_name = [levels.LookupParameter("Nom").AsString() for levels in level_eleme
 level_id = [levels.Id for levels in level_elements]
 # /////////////////////////////////////////////////////////////////////////////////
 
-
-#COLLECT TEMPLATE ID //////////////////////////////////////////////////////////////
-# Pour set un template on utilise ViewTemplateId = 
-#//////////////////////////////////////////////////////////////////////////////////
 
 
 # CREATE VIEWS ////////////////////////////////////////////////////////////////////
@@ -106,7 +107,19 @@ with db.Transaction('create arborescence'):
 # /////////////////////////////////////////////////////////////////////////////////
 
 
+#COLLECT TEMPLATE //////////////////////////////////////////////////////////////
+view_category = db.Collector(of_category = 'OST_Views').ToElements()
+view_templates = [view for view in view_category if view.IsTemplate]
+view_templates_id = [view.Id for view in view_templates]
+view_templates_name = [view.Name for view in view_templates]
 
+# SET TEMPLATE
+view_category = db.Collector(of_category = 'OST_Views', is_not_type = True)
+view_element = view_category.get_elements()
+view_id = [views.Id for views in view_element]
+# for view in view_element:
+# 	view.ViewTemplateId = view_templates_id[0] #works only with not active view
+#//////////////////////////////////////////////////////////////////////////////////
 
 
 

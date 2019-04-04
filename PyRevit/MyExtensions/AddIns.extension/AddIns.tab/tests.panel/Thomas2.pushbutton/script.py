@@ -18,24 +18,21 @@ a_a = str("\xe0")
 
 
 
-# COLLECT VIEWS
-view_category = db.Collector(of_category = 'OST_Views', is_not_type = True)
-view_element = view_category.get_elements()
-view_id = [views.Id for views in view_element]
-# COLLECT SHEETS
-sheet_category = db.Collector(of_category = 'OST_Sheets', is_not_type = True)
-sheet_element = sheet_category.get_elements()
-sheet_id = [sheets.Id for sheets in sheet_element]
-# SET POINT 
-point = DB.XYZ(1,1,0)
-# PLACE VIEW IN SHEET 
-with db.Transaction('place view in sheet'):
-	DB.Viewport.Create(revit.doc, sheet_id[0], view_id[6], point)
-
-
-
-
-
+# # //////////////////////////////////////////////////////////////////////////
+# # COLLECT VIEWS
+# view_category = db.Collector(of_category = 'OST_Views', is_not_type = True)
+# view_element = view_category.get_elements()
+# view_id = [views.Id for views in view_element]
+# # COLLECT SHEETS
+# sheet_category = db.Collector(of_category = 'OST_Sheets', is_not_type = True)
+# sheet_element = sheet_category.get_elements()
+# sheet_id = [sheets.Id for sheets in sheet_element]
+# # SET POINT 
+# point = DB.XYZ(1,1,0)
+# # PLACE VIEW IN SHEET 
+# with db.Transaction('place view in sheet'):
+# 	DB.Viewport.Create(revit.doc, sheet_id[0], view_id[6], point)
+# # //////////////////////////////////////////////////////////////////////////
 
 
 
@@ -94,8 +91,51 @@ with db.Transaction('place view in sheet'):
 
 
 
+# class FailureHandler(IFailuresPreprocessor):
+#                def __init__(self):
+#                               self.ErrorMessage = ""
+#                               self.ErrorSeverity = ""
+#                def PreprocessFailures(self, failuresAccessor):
+#                               # failuresAccessor.DeleteAllWarning()
+#                               # return FailureProcessingResult.Continue
+#                               failures = failuresAccessor.GetFailureMessages()
+#                               rslt = ""
+#                               for f in failures:
+#                                             fseverity = failuresAccessor.GetSeverity()
+#                                             if fseverity == FailureSeverity.Warning:
+#                                                            failuresAccessor.DeleteWarning(f)
+#                                             elif fseverity == FailureSeverity.Error:
+#                                                            rslt = "Error"
+#                                                            failuresAccessor.ResolveFailure(f)
+#                               if rslt == "Error":
+#                                             return FailureProcessingResult.ProceedWithCommit
+#                                             # return FailureProcessingResult.ProceedWithRollBack
+#                               else:
+#                                             return FailureProcessingResult.Continue
 
 
+
+# try:
+#                t2 = Transaction(doc, 'Regroup group')
+#                t2.Start()
+
+#                print(t2.GetStatus())
+
+#                failureHandlingOptions = t2.GetFailureHandlingOptions()
+#                failureHandler = FailureHandler()
+#                failureHandlingOptions.SetFailuresPreprocessor(failureHandler)
+#                failureHandlingOptions.SetClearAfterRollback(True)
+#                t2.SetFailureHandlingOptions(failureHandlingOptions)
+
+#                Regroup(groupname,groupmember)
+
+#                t2.Commit()
+#                print(t2.GetStatus())
+
+# except:
+#                t2.RollBack()
+               
+#                print(t2.GetStatus())
 
 
 
