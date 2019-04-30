@@ -13,7 +13,7 @@ from rpw.ui.forms import *
 from System import Array
 from System.Runtime.InteropServices import Marshal
 import sys
-import Autodesk
+
 
 
 e_a = str("\xe9")
