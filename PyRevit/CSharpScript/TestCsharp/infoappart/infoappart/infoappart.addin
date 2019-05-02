@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<RevitAddIns>
+  <AddIn Type="Command">
+    <Name>infoappart</Name>
+    <Assembly>infoappart.dll</Assembly>
+    <AddInId>
+      CB1250A9-946B-46AB-A725-B9C00399E2B4
+    </AddInId>
+    <FullClassName>infoappart.recupinfopiece</FullClassName>
+    <Text>recupinfopiece</Text>
+    <Description>recupere les informations des pieces</Description>
+    <VendorId>Jules</VendorId>
+    <VendorDescription>@Learndynamo</VendorDescription>
+    <VisibilityMode>NotVisibleWhenNoActiveDocument</VisibilityMode>
+  </AddIn>
+</RevitAddIns>
