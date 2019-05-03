@@ -8,6 +8,8 @@ import rpw
 import clr
 clr.AddReference('RevitAPI') 
 clr.AddReference('RevitAPIUI') 
+clr.AddReference('System')
+from System.Collections.Generic import List
 from rpw import revit, db, ui, DB, UI
 from rpw.ui.forms import *
 from System import Array
@@ -16,31 +18,58 @@ import sys
 import Autodesk
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import *
-
-
-
-# # COLLECT GENERIC MODEL ///////////////////
-# genericModel_category = db.Collector(of_category = 'OST_GenericModel' , is_type = True)
-# genericModel_element = genericModel_category.get_elements()
-# genericModel_element_CategoryId = [model.Category.Id for model in  genericModel_element]
-# # CREATE SCHEDULE VIEW ///////////////////////////////////////
-# newSchedule = []
-# with db.Transaction('create schedule view'):
-# 	newSchedule.append(DB.ViewSchedule.CreateSchedule(revit.doc, genericModel_element_CategoryId[0]))
-# 	schedulableFields = [sc.Definition.GetSchedulableFields() for sc in newSchedule]
-# # //////////////////////////////////////////////////////
-
-
-# /////////////////////////////////////////////////////////////////////////
-import clr
-
 clr.AddReference('System.Drawing')
 clr.AddReference('System.Windows.Forms')
-
 from System.Drawing import *
 from System.Windows.Forms import *
 
 
+
+# # ///////////////////////////////////////////////////////////////////////
+# # CREATE FILTER FOR WORKSET
+# with db.Transaction('create filter'):
+# 	new_workset = DB.Workset.Create(revit.doc, "nouveauSousProjet")
+# 	worksetId = str(new_workset.Id)
+# 	elemId = DB.ElementId(int(worksetId))
+
+# 	all_Categories_Id = System.Enum.GetValues(BuiltInCategory)
+# 	catlist = [ElementId(i) for i in all_Categories_Id]
+# 	typeCatList = List[DB.ElementId](catlist)
+
+# 	workset_parameter = DB.ElementId(DB.BuiltInParameter.ELEM_PARTITION_PARAM)
+
+# 	rule = [DB.ParameterFilterRuleFactory.CreateEqualsRule(workset_parameter,elemId)]
+
+# 	new_filter = DB.ParameterFilterElement.Create(revit.doc,"nouveauFiltre",typeCatList,rule)
+# # ////////////////////////////////////////////////////////////////////////
+
+
+
+# /////////////////////////////////////////////////////////////////////////
+# COLLECT LINK INSTANCE
+collector_maq = DB.FilteredElementCollector(revit.doc)
+linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
+linkDoc = [links.GetLinkDocument() for links in linkInstances]
+linkDoc_name = [link.Name for link in linkInstances]
+
+
+# COLLECT WORKSETS LINKS
+collector_maq = DB.FilteredElementCollector(revit.doc)
+linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
+linkDoc = [links.GetLinkDocument() for links in linkInstances]
+
+for j in range(len(linkDoc)):
+	try:
+		collector_link = DB.FilteredWorksetCollector(linkDoc[j])
+		collect_worksets_link = collector_link.OfKind(DB.WorksetKind.UserWorkset)
+		worksets_name_link = [workset.Name for workset in collect_worksets_link]
+	except : pass
+	
+#COLOR
+color_list = ["bleu","rouge","vert","jaune","orange","marron","rose","violet","bleu clair"]
+
+
+# /////////////////////////////////////////////////////////////////////////
 class MyListBox(Form):
 	"""docstring for ClassName"""
 	def __init__(self):
@@ -58,8 +87,8 @@ class MyListBox(Form):
 		listbox1.Parent = self
 		listbox1.Location = Point(5,30)
 		listbox1.Size = Size(180,100)
-		for k in range(50):
-			listbox1.Items.Add("item" + str(k))
+		for k in linkDoc_name:
+			listbox1.Items.Add(k)
 
 
 
@@ -72,8 +101,8 @@ class MyListBox(Form):
 		listbox2.Parent = self
 		listbox2.Location = Point(200,30)
 		listbox2.Size = Size(180,100)
-		for k in range(50):
-			listbox2.Items.Add("item" + str(k))
+		for k in worksets_name_link:
+			listbox2.Items.Add(k)
 
 
 
@@ -86,8 +115,8 @@ class MyListBox(Form):
 		listbox3.Parent = self
 		listbox3.Location = Point(400,30)
 		listbox3.Size = Size(180,100)
-		for k in range(50):
-			listbox3.Items.Add("item" + str(k))
+		for k in color_list:
+			listbox3.Items.Add(k)
 
 
 
@@ -143,7 +172,6 @@ class MyListBox(Form):
 		self.CenterToScreen()
 
 Application.Run(MyListBox())
-
 # ///////////////////////////////////////////////////////
 
 # class HelloWorld3Form(Form):
@@ -382,7 +410,16 @@ Application.Run(MyListBox())
 
 
 
-
+# # COLLECT GENERIC MODEL ///////////////////
+# genericModel_category = db.Collector(of_category = 'OST_GenericModel' , is_type = True)
+# genericModel_element = genericModel_category.get_elements()
+# genericModel_element_CategoryId = [model.Category.Id for model in  genericModel_element]
+# # CREATE SCHEDULE VIEW ///////////////////////////////////////
+# newSchedule = []
+# with db.Transaction('create schedule view'):
+# 	newSchedule.append(DB.ViewSchedule.CreateSchedule(revit.doc, genericModel_element_CategoryId[0]))
+# 	schedulableFields = [sc.Definition.GetSchedulableFields() for sc in newSchedule]
+# # //////////////////////////////////////////////////////
 
 
 
