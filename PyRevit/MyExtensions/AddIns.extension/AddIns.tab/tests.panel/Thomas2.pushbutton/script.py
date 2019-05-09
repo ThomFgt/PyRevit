@@ -58,11 +58,12 @@ collector_maq = DB.FilteredElementCollector(revit.doc)
 linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
 linkDoc = [links.GetLinkDocument() for links in linkInstances]
 
+worksets_name_link = []
 for j in range(len(linkDoc)):
 	try:
 		collector_link = DB.FilteredWorksetCollector(linkDoc[j])
 		collect_worksets_link = collector_link.OfKind(DB.WorksetKind.UserWorkset)
-		worksets_name_link = [workset.Name for workset in collect_worksets_link]
+		worksets_name_link.append([workset.Name for workset in collect_worksets_link])
 	except : pass
 	
 #COLOR
@@ -89,6 +90,7 @@ class MyListBox(Form):
 		listbox1.Size = Size(180,100)
 		for k in linkDoc_name:
 			listbox1.Items.Add(k)
+		listbox1.SelectedIndexChanged += self.OnChanged
 
 
 
@@ -97,13 +99,13 @@ class MyListBox(Form):
 		label2.Text = "la liste 2"
 		label2.Location = Point(200,5)
 
-		listbox2 = ListBox() 
-		listbox2.Parent = self
-		listbox2.Location = Point(200,30)
-		listbox2.Size = Size(180,100)
-		for k in worksets_name_link:
-			listbox2.Items.Add(k)
+		self.listbox2 = ListBox() 
+		self.listbox2.Parent = self
+		self.listbox2.Location = Point(200,30)
+		self.listbox2.Size = Size(180,100)
+		self.listbox2.Items.Add("...")
 
+			
 
 
 		label3 = Label()
@@ -170,6 +172,11 @@ class MyListBox(Form):
 
 
 		self.CenterToScreen()
+
+	def OnChanged(self,sender,event):
+		index = sender.SelectedIndex
+		for k in worksets_name_link[index]:
+			self.listbox2.Items.Add(k)
 
 Application.Run(MyListBox())
 # ///////////////////////////////////////////////////////
