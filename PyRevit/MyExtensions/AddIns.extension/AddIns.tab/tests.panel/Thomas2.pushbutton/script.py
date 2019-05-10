@@ -3,7 +3,7 @@ e_a = str("\xe9")
 a_a = str("\xe0")
 # IMPORT
 import math
-import System 
+import System
 import rpw
 import clr
 clr.AddReference('RevitAPI') 
@@ -70,6 +70,7 @@ for j in range(len(linkDoc)):
 color_list = ["bleu","rouge","vert","jaune","orange","marron","rose","violet","bleu clair"]
 
 
+
 # /////////////////////////////////////////////////////////////////////////
 class MyListBox(Form):
 	"""docstring for ClassName"""
@@ -79,18 +80,23 @@ class MyListBox(Form):
 		self.Height = screenSize.Height / 2
 		self.Width = screenSize.Width / 3
 
+		self.dico = {}
+
+
+
 		label1 = Label()
 		label1.Parent = self
 		label1.Text = "la liste 1"
 		label1.Location = Point(5,5)
 
-		listbox1 = ListBox()
-		listbox1.Parent = self
-		listbox1.Location = Point(5,30)
-		listbox1.Size = Size(180,100)
+		self.listbox1 = ListBox()
+		self.listbox1.Parent = self
+		self.listbox1.Location = Point(5,30)
+		self.listbox1.Size = Size(180,100)
 		for k in linkDoc_name:
-			listbox1.Items.Add(k)
-		listbox1.SelectedIndexChanged += self.OnChanged
+			self.listbox1.Items.Add(k)
+		self.listbox1.SelectedIndexChanged += self.OnChanged
+
 
 
 
@@ -103,7 +109,8 @@ class MyListBox(Form):
 		self.listbox2.Parent = self
 		self.listbox2.Location = Point(200,30)
 		self.listbox2.Size = Size(180,100)
-		self.listbox2.Items.Add("...")
+		self.listbox2.Items.Add(" ")
+
 
 			
 
@@ -113,187 +120,118 @@ class MyListBox(Form):
 		label3.Text = "la liste 3"
 		label3.Location = Point(400,5)
 
-		listbox3 = ListBox()
-		listbox3.Parent = self
-		listbox3.Location = Point(400,30)
-		listbox3.Size = Size(180,100)
+		self.listbox3 = ListBox()
+		self.listbox3.Parent = self
+		self.listbox3.Location = Point(400,30)
+		self.listbox3.Size = Size(180,100)
 		for k in color_list:
-			listbox3.Items.Add(k)
+			self.listbox3.Items.Add(k)
 
 
 
-		buttonAdd = Button()
-		buttonAdd.Parent = self
-		buttonAdd.Text = "Ajouter filtre"
-		buttonAdd.Location = Point(450,150)
-		buttonAdd.Size = Size(100,25)
+
+		self.buttonAdd = Button()
+		self.buttonAdd.Parent = self
+		self.buttonAdd.Text = "Ajouter filtre"
+		self.buttonAdd.Location = Point(450,150)
+		self.buttonAdd.Size = Size(100,25)
+		self.buttonAdd.Click += self.UpDate
 
 
-		buttonOk = Button()
-		buttonOk.Parent = self
-		buttonOk.Text = "Ok Chef"
-		buttonOk.Location = Point(500,420)
+		self.buttonOk = Button()
+		self.buttonOk.Parent = self
+		self.buttonOk.Text = "Ok Chef"
+		self.buttonOk.Location = Point(500,420)
 
 
-		buttonCancel = Button()
-		buttonCancel.Parent = self
-		buttonCancel.Text = "ANNULE"
-		buttonCancel.Location = Point(400,420)
+		self.buttonCancel = Button()
+		self.buttonCancel.Parent = self
+		self.buttonCancel.Text = "ANNULE"
+		self.buttonCancel.Location = Point(400,420)
+		self.buttonCancel.Click += self.Cancel
 
 
-		groupBox1 = GroupBox()
-		groupBox1.Parent = self
-		groupBox1.Text = "Détail des filtres"
-		groupBox1.Location = Point(50,200)
-		groupBox1.Size = Size(500,200)
+		self.groupBox1 = GroupBox()
+		self.groupBox1.Parent = self
+		self.groupBox1.Text = "Détail des filtres"
+		self.groupBox1.Location = Point(50,200)
+		self.groupBox1.Size = Size(500,200)
 
 		
 		for k in range(1,9):
-			label1 = Label()
-			label1.Parent = groupBox1
-			label1.Text = " "
-			label1.Location = Point(40,20*k)
-			label1.Size = Size(120,20)
-			label1.BorderStyle = BorderStyle.Fixed3D
-
-			label2 = Label()
-			label2.Parent = groupBox1
-			label2.Text = " "
-			label2.Location = Point(200,20*k)
-			label2.Size = Size(120,20)
-			label2.BorderStyle = BorderStyle.Fixed3D
+			self.label1 = Label()
+			self.label1.Name = "label1" + str(k)
+			self.label1.Parent = self.groupBox1
+			self.label1.Text = " "
+			self.label1.Location = Point(40,20*k)
+			self.label1.Size = Size(120,20)
+			self.label1.BorderStyle = BorderStyle.Fixed3D
+			self.dico[self.label1.Name] = self.label1
 			
-			label3 = Label()
-			label3.Parent = groupBox1
-			label3.Text = " "
-			label3.Location = Point(350,20*k)
-			label3.Size = Size(120,20)
-			label3.BorderStyle = BorderStyle.Fixed3D
+			self.label2 = Label()
+			self.label2.Name = "label2" + str(k)
+			self.label2.Parent = self.groupBox1
+			self.label2.Text = " "
+			self.label2.Location = Point(200,20*k)
+			self.label2.Size = Size(120,20)
+			self.label2.BorderStyle = BorderStyle.Fixed3D
+			self.dico[self.label2.Name] = self.label2
+			
+			self.label3 = Label()
+			self.label3.Name = "label3" + str(k)
+			self.label3.Parent = self.groupBox1
+			self.label3.Text = " "
+			self.label3.Location = Point(350,20*k)
+			self.label3.Size = Size(120,20)
+			self.label3.BorderStyle = BorderStyle.Fixed3D
+			self.dico[self.label3.Name] = self.label3
 
 
+		self.counterDict={'1':1,'2':1,'3':1}
+		
 		self.CenterToScreen()
 
+
+
 	def OnChanged(self,sender,event):
+		self.listbox2.Items.Clear()
 		index = sender.SelectedIndex
 		for k in worksets_name_link[index]:
 			self.listbox2.Items.Add(k)
+		
+
+
+	def UpDate(self,sender,event):
+		
+		label = self.dico["label1"+str(self.counterDict["1"])]
+		label.Text = self.listbox1.SelectedItem
+
+		label = self.dico["label2"+str(self.counterDict["2"])]
+		label.Text = self.listbox2.SelectedItem
+
+		label = self.dico["label3"+str(self.counterDict["3"])]
+		label.Text = self.listbox3.SelectedItem
+
+		for k in range(1,4):
+			if self.counterDict[str(k)] < 8:
+				self.counterDict[str(k)] += 1
+
+
+
+	def Cancel(self,sender,event):
+		self.Close()
+		
+
+
+
+
 
 Application.Run(MyListBox())
+
+print("fegf")
 # ///////////////////////////////////////////////////////
 
-# class HelloWorld3Form(Form):
-#     def __init__(self):
-#         self.Text = "Hello World 3"
-#         self.FormBorderStyle = FormBorderStyle.FixedDialog
 
-#         screenSize = Screen.GetWorkingArea(self)
-#         self.Height = screenSize.Height / 3
-#         self.Width = screenSize.Width / 3
-
-#         self.panelHeight = self.ClientRectangle.Height / 2
-
-#         self.setupPanel1()
-#         self.setupPanel2()
-#         self.setupCounters()
-
-#         self.Controls.Add(self.panel1)
-#         self.Controls.Add(self.panel2)
-
-#     def setupPanel1(self):
-#         self.panel1 = Panel()
-#         self.panel1.BackColor = Color.LightSlateGray
-#         self.panel1.ForeColor = Color.Blue
-#         self.panel1.Width = self.Width
-#         self.panel1.Height = self.panelHeight
-#         self.panel1.Location = Point(0, 0)
-#         self.panel1.BorderStyle = BorderStyle.FixedSingle
-
-#         self.label1 = Label()
-#         self.label1.Text = "Go On - Press Me"
-#         self.label1.Location = Point(20, 20)
-#         self.label1.Height = 25
-#         self.label1.Width = 175
-
-#         self.button1 = Button()
-#         self.button1.Name = '1'
-#         self.button1.Text = 'Press Me 1'
-#         self.button1.Location = Point(20, 50)
-#         self.button1.Click += self.update
-
-#         self.panel1.Controls.Add(self.label1)
-#         self.panel1.Controls.Add(self.button1)
-
-#     def setupPanel2(self):
-#         self.panel2 = Panel()
-#         self.panel2.BackColor = Color.LightSalmon
-#         self.panel2.Width = self.Width
-#         self.panel2.Height = self.panelHeight
-#         self.panel2.Location = Point(0, self.panelHeight)
-#         self.panel2.BorderStyle = BorderStyle.FixedSingle
-
-#         self.subpanel1 = Panel()
-#         self.subpanel1.BackColor = Color.Wheat
-#         self.subpanel1.Width = 175
-#         self.subpanel1.Height = 100
-#         self.subpanel1.Location = Point(25, 25)
-#         self.subpanel1.BorderStyle = BorderStyle.Fixed3D
-
-#         self.label2 = Label()
-#         self.label2.Text = "Go On - Press Me"
-#         self.label2.Location = Point(20, 20)
-#         self.label2.Height = 25
-#         self.label2.Width = 175
-
-#         self.button2 = Button()
-#         self.button2.Name = '2'
-#         self.button2.Text = 'Press Me 2'
-#         self.button2.Location = Point(20, 50)
-#         self.button2.Click += self.update
-
-#         self.subpanel1.Controls.Add(self.label2)
-#         self.subpanel1.Controls.Add(self.button2)
-
-#         self.subpanel2 = Panel()
-#         self.subpanel2.BackColor = Color.Transparent
-#         self.subpanel2.Width = 175
-#         self.subpanel2.Height = 100
-#         self.subpanel2.Location = Point(220, 25)
-#         self.subpanel2.BorderStyle = BorderStyle.Fixed3D
-
-#         self.label3 = Label()
-#         self.label3.Text = "Go On - Press Me"
-#         self.label3.Location = Point(20, 20)
-#         self.label3.Height = 25
-#         self.label3.Width = 175
-
-#         self.button3 = Button()
-#         self.button3.Name = '3'
-#         self.button3.Text = 'Press Me 3'
-#         self.button3.Location = Point(20, 50)
-#         self.button3.Click += self.update
-
-#         self.subpanel2.Controls.Add(self.label3)
-#         self.subpanel2.Controls.Add(self.button3)
-
-#         self.panel2.Controls.Add(self.subpanel1)
-#         self.panel2.Controls.Add(self.subpanel2)
-
-#     def setupCounters(self):
-#         self.counterDict = {
-#             '1': 0,
-#             '2': 0,
-#             '3': 0,
-#         }
-
-#     def update(self, sender, event):
-#         name = sender.Name
-#         self.counterDict[name] += 1
-#         label = getattr(self, 'label' + name)
-#         label.Text = "You have pressed me %s times." % self.counterDict[name]
-
-
-# form = HelloWorld3Form()
-# Application.Run(form)
 
 # # //////////////////////////////////////////////////////////////////////////
 # # COLLECT VIEWS
