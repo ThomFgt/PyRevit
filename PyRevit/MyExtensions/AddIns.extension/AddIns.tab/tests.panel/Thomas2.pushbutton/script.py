@@ -25,24 +25,6 @@ from System.Windows.Forms import *
 
 
 
-# # ///////////////////////////////////////////////////////////////////////
-# # CREATE FILTER FOR WORKSET
-# with db.Transaction('create filter'):
-# 	new_workset = DB.Workset.Create(revit.doc, "nouveauSousProjet")
-# 	worksetId = str(new_workset.Id)
-# 	elemId = DB.ElementId(int(worksetId))
-
-# 	all_Categories_Id = System.Enum.GetValues(BuiltInCategory)
-# 	catlist = [ElementId(i) for i in all_Categories_Id]
-# 	typeCatList = List[DB.ElementId](catlist)
-
-# 	workset_parameter = DB.ElementId(DB.BuiltInParameter.ELEM_PARTITION_PARAM)
-
-# 	rule = [DB.ParameterFilterRuleFactory.CreateEqualsRule(workset_parameter,elemId)]
-
-# 	new_filter = DB.ParameterFilterElement.Create(revit.doc,"nouveauFiltre",typeCatList,rule)
-# # ////////////////////////////////////////////////////////////////////////
-
 
 
 # /////////////////////////////////////////////////////////////////////////
@@ -69,7 +51,7 @@ for j in range(len(linkDoc)):
 #COLOR
 color_list = ["bleu","rouge","vert","jaune","orange","marron","rose","violet","bleu clair"]
 
-
+data_out = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
 
 # /////////////////////////////////////////////////////////////////////////
 class MyListBox(Form):
@@ -142,6 +124,7 @@ class MyListBox(Form):
 		self.buttonOk.Parent = self
 		self.buttonOk.Text = "Ok Chef"
 		self.buttonOk.Location = Point(500,420)
+		self.buttonOk.Click += self.Ok
 
 
 		self.buttonCancel = Button()
@@ -220,18 +203,63 @@ class MyListBox(Form):
 
 	def Cancel(self,sender,event):
 		self.Close()
-		
 
+
+	def Ok(self,sender,event):
+		for i in range(0,8):
+			data_out[i][0] = self.dico["label1"+str(i+1)].Text
+			data_out[i][1] = self.dico["label2"+str(i+1)].Text
+			data_out[i][2] = self.dico["label3"+str(i+1)].Text
+		self.Close()
 
 
 
 
 Application.Run(MyListBox())
 
-print("fegf")
-# ///////////////////////////////////////////////////////
+print data_out
+
+# ///////////////////////////////////////////////////////////////////////
+inL = lambda e, L: reduce(lambda b, l: b or e in l, L, False)
+
+dico_couleur = {}
+
+if inL(0, data_out):
+	print "A+"
+else:
+# CREATE FILTER FOR WORKSET
+	view = revit.doc.ActiveView 
+	with db.Transaction('create filter'):
+		for j in range(len(data_out)):
+			if data_out[j][0] == " " :
+				pass
+			else:
+				new_workset = DB.Workset.Create(revit.doc, str(data_out[j][1]))
+				worksetId = str(new_workset.Id)
+				elemId = DB.ElementId(int(worksetId))
+
+				all_Categories_Id = System.Enum.GetValues(BuiltInCategory)
+				catlist = [ElementId(i) for i in all_Categories_Id]
+				typeCatList = List[DB.ElementId](catlist)
+
+				workset_parameter = DB.ElementId(DB.BuiltInParameter.ELEM_PARTITION_PARAM)
+
+				rule = [DB.ParameterFilterRuleFactory.CreateEqualsRule(workset_parameter,elemId)]
+
+				new_filter = DB.ParameterFilterElement.Create(revit.doc,"Filtre " + str(data_out[j][1]),typeCatList,rule)
+
+				DB.View.AddFilter(view , new_filter.Id)
+
+				ogs = DB.OverrideGraphicSettings()
+				ogs.SetProjectionFillColor(DB.Color(255,0,0))
+				ogs.SetProjectionFillPatternId(ElementId(4))
+				ogs.SetProjectionFillPatternVisible(True)
+				ogs.SetSurfaceTransparency(80)
+
+				DB.View.SetFilterOverrides(view, new_filter.Id , ogs)
 
 
+# ////////////////////////////////////////////////////////////////////////
 
 # # //////////////////////////////////////////////////////////////////////////
 # # COLLECT VIEWS
