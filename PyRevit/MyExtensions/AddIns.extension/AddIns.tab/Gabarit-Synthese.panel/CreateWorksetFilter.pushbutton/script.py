@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
+
+__title__ = 'Workset Filter'
+
+__doc__ = "Ce programme créé et ajoute des filtres de couleur sur les sous-projets des maquettes en lien. Filtres appliqués sur la vue active. Fonctionne avec Revit 2018"
+
+
 e_a = str("\xe9")
 a_a = str("\xe0")
+
 # IMPORT
 import math
 import System
@@ -25,7 +32,7 @@ from System.Windows.Forms import *
 
 
 	
-
+# List of all category available for filters
 Cat = [
 			DB.BuiltInCategory.OST_DuctTerminal ,
 			DB.BuiltInCategory.OST_BeamAnalytical ,
@@ -163,8 +170,7 @@ Cat = [
 			]
 catlist = [ElementId(i) for i in Cat]
 typeCatList = List[DB.ElementId](catlist)
-
-
+# /////////////////////////////////////////////////////////////////////////
 
 # /////////////////////////////////////////////////////////////////////////
 # COLLECT LINK INSTANCE
@@ -173,26 +179,27 @@ linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
 linkDoc = [links.GetLinkDocument() for links in linkInstances]
 linkDoc_name = [link.Name for link in linkInstances]
 
-
 # COLLECT WORKSETS LINKS
 collector_maq = DB.FilteredElementCollector(revit.doc)
 linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
 linkDoc = [links.GetLinkDocument() for links in linkInstances]
-
 worksets_name_link = []
 for j in range(len(linkDoc)):
 	try:
 		collector_link = DB.FilteredWorksetCollector(linkDoc[j])
 		collect_worksets_link = collector_link.OfKind(DB.WorksetKind.UserWorkset)
 		worksets_name_link.append([workset.Name for workset in collect_worksets_link])
-	except : pass
+	except : pass # if link is unload, don't collect his worksets
 	
-#COLOR
+# COLOR LIST
 color_list = ["bleu","rouge","vert","jaune","orange","marron","rose","violet","bleu clair"]
 
+# LIST OUT
 data_out = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
+# /////////////////////////////////////////////////////////////////////////
 
 # /////////////////////////////////////////////////////////////////////////
+# START WINDOWS FORM
 class MyListBox(Form):
 	"""docstring for ClassName"""
 	def __init__(self):
@@ -200,16 +207,14 @@ class MyListBox(Form):
 		screenSize = Screen.GetWorkingArea(self)
 		self.Height = screenSize.Height / 2
 		self.Width = screenSize.Width / 3
-
 		self.dico = {}
 
-
-
+	# label for listbox 1 on the left
 		label1 = Label()
 		label1.Parent = self
 		label1.Text = "la liste 1"
 		label1.Location = Point(5,5)
-
+	# listbox 1 on the left
 		self.listbox1 = ListBox()
 		self.listbox1.Parent = self
 		self.listbox1.Location = Point(5,30)
@@ -218,29 +223,24 @@ class MyListBox(Form):
 			self.listbox1.Items.Add(k)
 		self.listbox1.SelectedIndexChanged += self.OnChanged
 
-
-
-
+	# label for listbox 2 on the middle
 		label2 = Label()
 		label2.Parent = self
 		label2.Text = "la liste 2"
 		label2.Location = Point(200,5)
-
+	# listbox 2 on the middle
 		self.listbox2 = ListBox() 
 		self.listbox2.Parent = self
 		self.listbox2.Location = Point(200,30)
 		self.listbox2.Size = Size(180,100)
 		self.listbox2.Items.Add(" ")
 
-
-			
-
-
+	# label for listbox 3 on the right
 		label3 = Label()
 		label3.Parent = self
 		label3.Text = "la liste 3"
 		label3.Location = Point(400,5)
-
+	# listbox 3 on the right
 		self.listbox3 = ListBox()
 		self.listbox3.Parent = self
 		self.listbox3.Location = Point(400,30)
@@ -248,38 +248,34 @@ class MyListBox(Form):
 		for k in color_list:
 			self.listbox3.Items.Add(k)
 
-
-
-
+	# button add filter
 		self.buttonAdd = Button()
 		self.buttonAdd.Parent = self
 		self.buttonAdd.Text = "Ajouter filtre"
 		self.buttonAdd.Location = Point(450,150)
 		self.buttonAdd.Size = Size(100,25)
 		self.buttonAdd.Click += self.UpDate
-
-
+	# button OK
 		self.buttonOk = Button()
 		self.buttonOk.Parent = self
 		self.buttonOk.Text = "Ok Chef"
 		self.buttonOk.Location = Point(500,420)
 		self.buttonOk.Click += self.Ok
-
-
+	# button Cancel
 		self.buttonCancel = Button()
 		self.buttonCancel.Parent = self
 		self.buttonCancel.Text = "ANNULE"
 		self.buttonCancel.Location = Point(400,420)
 		self.buttonCancel.Click += self.Cancel
 
-
+	# groupbox for visualize filter added
 		self.groupBox1 = GroupBox()
 		self.groupBox1.Parent = self
 		self.groupBox1.Text = "Détail des filtres"
 		self.groupBox1.Location = Point(50,200)
 		self.groupBox1.Size = Size(500,200)
 
-		
+	# all empty label in the groupbox. 8 lines and 3 columns.
 		for k in range(1,9):
 			self.label1 = Label()
 			self.label1.Name = "label1" + str(k)
@@ -308,42 +304,36 @@ class MyListBox(Form):
 			self.label3.BorderStyle = BorderStyle.Fixed3D
 			self.dico[self.label3.Name] = self.label3
 
-
+	# counter for changing line in groupbox
 		self.counterDict={'1':1,'2':1,'3':1}
-		
+	# center the form on screen
 		self.CenterToScreen()
 
-
-
+	# EVENT ON CLICK //////
+	# Event on changing selected link in first listbox
 	def OnChanged(self,sender,event):
 		self.listbox2.Items.Clear()
 		index = sender.SelectedIndex
 		for k in worksets_name_link[index]:
 			self.listbox2.Items.Add(k)
 		
-
-
+	# Event after adding a filter in groupbox. Right on the next line in groupbox. Stop at 8 filters max.
 	def UpDate(self,sender,event):
-		
 		label = self.dico["label1"+str(self.counterDict["1"])]
 		label.Text = self.listbox1.SelectedItem
-
 		label = self.dico["label2"+str(self.counterDict["2"])]
 		label.Text = self.listbox2.SelectedItem
-
 		label = self.dico["label3"+str(self.counterDict["3"])]
 		label.Text = self.listbox3.SelectedItem
-
 		for k in range(1,4):
 			if self.counterDict[str(k)] < 8:
 				self.counterDict[str(k)] += 1
 
-
-
+	# Event on Cancel Button Click
 	def Cancel(self,sender,event):
 		self.Close()
 
-
+	# Event on OK Button Click
 	def Ok(self,sender,event):
 		for i in range(0,8):
 			data_out[i][0] = self.dico["label1"+str(i+1)].Text
@@ -351,42 +341,81 @@ class MyListBox(Form):
 			data_out[i][2] = self.dico["label3"+str(i+1)].Text
 		self.Close()
 
-
-
-
+# run form
 Application.Run(MyListBox())
-
-print data_out
-
+# END OF WINDOWS FORM ///////////////////////////////////////////////////
 # ///////////////////////////////////////////////////////////////////////
-inL = lambda e, L: reduce(lambda b, l: b or e in l, L, False)
 
+# function for find in list of list
+inL = lambda e, L: reduce(lambda b, l: b or e in l, L, False)
+# dictionnary of color 
 dico_couleur = {"bleu":DB.Color(0,0,255),"rouge":DB.Color(255,0,0),"vert":DB.Color(0,255,0),"jaune":DB.Color(255,255,0),"orange":DB.Color(255,127,0),"marron":DB.Color(118,71,23),"rose":DB.Color(255,0,255),"violet":DB.Color(155,0,255),"bleu clair":DB.Color(0,255,255)}
 
+# CREATE WORKSET FILTER /////////////////////////////////////////////
+okgo = True
 if inL(0, data_out):
-	print "A+"
-else:
-# CREATE FILTER FOR WORKSET
-	active_view = revit.doc.ActiveView 
+	okgo = False
+	print "A+" # if these is a 0 in listout, it means user clicked on Cancel button
+else :
+	for i in range(len(data_out)):
+		if data_out[i][0] == "" and data_out[i][1] != "" and data_out[i][2] != "":
+			okgo = False
+			print "Try again !\nMerci de séléctionner un élément de chaque liste"
+			break
+		elif data_out[i][0] != "" and data_out[i][1] == "" and data_out[i][2] != "":
+			okgo = False
+			print "Try again !\nMerci de séléctionner un élément de chaque liste"
+			break
+		elif data_out[i][0] != "" and data_out[i][1] != "" and data_out[i][2] == "":
+			okgo = False
+			print "Try again !\nMerci de séléctionner un élément de chaque liste"
+			break
+		elif data_out[i][0] == "" and data_out[i][1] == "" and data_out[i][2] != "":
+			okgo = False
+			print "Try again !\nMerci de séléctionner un élément de chaque liste"
+			break
+		elif data_out[i][0] != "" and data_out[i][1] == "" and data_out[i][2] == "":
+			okgo = False
+			print "Try again !\nMerci de séléctionner un élément de chaque liste"
+			break
+		elif data_out[i][0] == "" and data_out[i][1] != "" and data_out[i][2] == "":
+			okgo = False
+			print "Try again !\nMerci de séléctionner un élément de chaque liste"
+			break
+		elif data_out[0][0] == " ":
+			okgo = False 
+			print "Pas de Filtre ? \nA+"
+			break
+
+if okgo :
 	for j in range(len(data_out)):
-		if data_out[j][0] == " " :
+		if data_out[j][0] == " ":
 			pass
-		else:
+		else : 
+			EndWell = True
 			with db.Transaction('create workset'):
-				new_workset = DB.Workset.Create(revit.doc, str(data_out[j][1]))
-			worksetId = str(new_workset.Id)
-			elemId = DB.ElementId(int(worksetId))
-
-			workset_parameter = DB.ElementId(DB.BuiltInParameter.ELEM_PARTITION_PARAM)
-
+				try:
+					new_workset = DB.Workset.Create(revit.doc, str(data_out[j][1]))
+					worksetId = str(new_workset.Id)
+					elemId = DB.ElementId(int(worksetId))
+					workset_parameter = DB.ElementId(DB.BuiltInParameter.ELEM_PARTITION_PARAM) #BuiltinParam for workset
+				except :
+					EndWell = False
+					print "Erreur\n\nSoit le projet n'est pas en collaboration, impossible de créer un sous-projet.\n\nSoit, un nom des nouveaux sous-projets existe déjà. Le sous-projet ---%s--- n'a pas été créé car il existe déjà." %data_out[j][1]
+					break
 			with db.Transaction('create rule'):
 				rule = [DB.ParameterFilterRuleFactory.CreateEqualsRule(workset_parameter,elemId)]
 
 			with db.Transaction('create filter'):
-				new_filter = DB.ParameterFilterElement.Create(revit.doc,"Filtre " + str(data_out[j][1]),typeCatList,rule)
+				try :
+					new_filter = DB.ParameterFilterElement.Create(revit.doc,"Filtre " + str(data_out[j][1]),typeCatList,rule)
+				except:
+					EndWell = False 
+					print "Un nom des nouveaux filtres existe déjà. le filtre ---%s--- n'a pas été créé ni ajouté à la vue mais le sous projet du même nom a été créé." %data_out[j][1]
+					break
 
 			with db.Transaction('add filter'):
-				DB.View.AddFilter(active_view , new_filter.Id)
+				DB.View.AddFilter(revit.doc.ActiveView , new_filter.Id)
 
 			with db.Transaction('set filter overrides'):
 				ogs = DB.OverrideGraphicSettings()
@@ -394,155 +423,9 @@ else:
 				ogs.SetProjectionFillPatternId(ElementId(4))
 				ogs.SetProjectionFillPatternVisible(True)
 				ogs.SetSurfaceTransparency(80)
+				DB.View.SetFilterOverrides(revit.doc.ActiveView , new_filter.Id , ogs)
+	if EndWell:
+		print "Finito !\nSi les filtres ont été créés mais n'ont pas eu d'effet sur la vue active alors il faut parcourir la liste des filtres créés dans la fenêtre -ajouter/Modifier- les filtres puis cliquer sur OK."
 
-				DB.View.SetFilterOverrides(active_view, new_filter.Id , ogs)
-
-
-print "finito"
 # ////////////////////////////////////////////////////////////////////////
 # ///////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
-# # //////////////////////////////////////////////////////////////////////////
-# # COLLECT VIEWS
-# view_category = db.Collector(of_category = 'OST_Views', is_not_type = True)
-# view_element = view_category.get_elements()
-# view_id = [views.Id for views in view_element]
-# # COLLECT SHEETS
-# sheet_category = db.Collector(of_category = 'OST_Sheets', is_not_type = True)
-# sheet_element = sheet_category.get_elements()
-# sheet_id = [sheets.Id for sheets in sheet_element]
-# # SET POINT 
-# point = DB.XYZ(1,1,0)
-# # PLACE VIEW IN SHEET 
-# with db.Transaction('place view in sheet'):
-# 	DB.Viewport.Create(revit.doc, sheet_id[0], view_id[6], point)
-# # //////////////////////////////////////////////////////////////////////////
-
-
-
-
-# # ////////////////////////////////////////////////////////////////////////
-# # COLLECT WORKSETS NAME LINK
-# collector_maq = DB.FilteredElementCollector(revit.doc)
-# linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
-# linkDoc = [links.GetLinkDocument() for links in linkInstances]
-# collector_link = DB.FilteredWorksetCollector(linkDoc[0])
-
-# collect_worksets_link = collector_link.OfKind(DB.WorksetKind.UserWorkset)
-# worksets_name_link = [workset.Name for workset in collect_worksets_link]
-# for workset in worksets_name_link:
-#   print workset
-
-
-# # CREATE WORKSETS IN MAQUETTE
-# with db.Transaction('create worksets'):
-#   for workset in worksets_name_link:
-#     DB.Workset.Create(revit.doc, workset)
-# # ///////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-# # USERFORM BIM CHECKER
-# components = [Label('Check a choisir'),
-#               CheckBox('checkbox1', 'Verifier le nom de la maquette'),
-#               CheckBox('checkbox2', 'Verifier si la maquette est centrale ou local'),
-#               CheckBox('checkbox3', 'Verifier le nombre de groupe dans la maquette' ),
-#               CheckBox('checkbox4', 'Verifier emplacement partage'),
-#               CheckBox('checkbox5', 'Verifier le point de base'),
-#               CheckBox('checkbox6', 'Verifier les niveaux'),
-#               CheckBox('checkbox7', 'Verifier les quadrillages'),
-#               CheckBox('checkbox8', 'Verifier les avertissements'),
-#               CheckBox('checkbox9', 'Verifier si chaque vue est utilisee pour une vue en plan'),
-#               CheckBox('checkbox10', 'Verifier le poids de la maquette'),
-#               CheckBox('checkbox11', 'Verifier la version Revit'),
-#               Label('Version Revit'),
-#               ComboBox('combobox1', {'2015':2015, '2016':2016, '2017':2017, '2018':2018, '2019':2019}),
-#               Label('Nom maquette exacte'),
-#               TextBox('textbox1', Text="EXEMPLE_MAQUETTE.rvt"),
-#               Label('Poids maximum maquette'),
-#               ComboBox('combobox2', {'150':150, '200':200, '250':250, '300':300, '350':350, '400':400, '450':450}),
-#               Label('choisir maquette QNP'),
-#               Button(button_text='QNP'),             
-#               Label('choisir visa Excel'),
-#               Button(button_text='VISA BIM'),
-#               Separator(), 
-#               Button('OK GO'),]
-# form = FlexForm('BIM CHECKER DU FUTUR', components)
-# form.show()
-
-
-
-# class FailureHandler(IFailuresPreprocessor):
-#                def __init__(self):
-#                               self.ErrorMessage = ""
-#                               self.ErrorSeverity = ""
-#                def PreprocessFailures(self, failuresAccessor):
-#                               # failuresAccessor.DeleteAllWarning()
-#                               # return FailureProcessingResult.Continue
-#                               failures = failuresAccessor.GetFailureMessages()
-#                               rslt = ""
-#                               for f in failures:
-#                                             fseverity = failuresAccessor.GetSeverity()
-#                                             if fseverity == FailureSeverity.Warning:
-#                                                            failuresAccessor.DeleteWarning(f)
-#                                             elif fseverity == FailureSeverity.Error:
-#                                                            rslt = "Error"
-#                                                            failuresAccessor.ResolveFailure(f)
-#                               if rslt == "Error":
-#                                             return FailureProcessingResult.ProceedWithCommit
-#                                             # return FailureProcessingResult.ProceedWithRollBack
-#                               else:
-#                                             return FailureProcessingResult.Continue
-
-
-
-# try:
-#                t2 = Transaction(doc, 'Regroup group')
-#                t2.Start()
-
-#                print(t2.GetStatus())
-
-#                failureHandlingOptions = t2.GetFailureHandlingOptions()
-#                failureHandler = FailureHandler()
-#                failureHandlingOptions.SetFailuresPreprocessor(failureHandler)
-#                failureHandlingOptions.SetClearAfterRollback(True)
-#                t2.SetFailureHandlingOptions(failureHandlingOptions)
-
-#                Regroup(groupname,groupmember)
-
-#                t2.Commit()
-#                print(t2.GetStatus())
-
-# except:
-#                t2.RollBack()
-               
-#                print(t2.GetStatus())
-
-
-
-
-# # COLLECT GENERIC MODEL ///////////////////
-# genericModel_category = db.Collector(of_category = 'OST_GenericModel' , is_type = True)
-# genericModel_element = genericModel_category.get_elements()
-# genericModel_element_CategoryId = [model.Category.Id for model in  genericModel_element]
-# # CREATE SCHEDULE VIEW ///////////////////////////////////////
-# newSchedule = []
-# with db.Transaction('create schedule view'):
-# 	newSchedule.append(DB.ViewSchedule.CreateSchedule(revit.doc, genericModel_element_CategoryId[0]))
-# 	schedulableFields = [sc.Definition.GetSchedulableFields() for sc in newSchedule]
-# # //////////////////////////////////////////////////////
-
-
-
-
-
-
