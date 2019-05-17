@@ -1,24 +1,29 @@
-"""Bulle la vue 3D active"""
+# # # # # Clash detection 2 # # # # #
 
 __title__ = 'Place bubbles\nin active 3D view'
 
 __doc__ = 'Ce programme place les bulles dans la vue 3D active'
 
 import clr
+import System
 import math
 clr.AddReference('RevitAPI') 
 clr.AddReference('RevitAPIUI') 
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import *
 from System.Collections.Generic import List
+from pyrevit import forms
+from rpw.ui.forms import TextInput
 
-# # # # # ATTENTION : SI BUBBLE NON PLACEE, MARCHE PAS
+doc = __revit__.ActiveUIDocument.Document
+uidoc = __revit__.ActiveUIDocument
+options = __revit__.Application.Create.NewGeometryOptions()
+copyOptions = CopyPasteOptions()
+
 class Bubble:
-
 	doc = __revit__.ActiveUIDocument.Document
 	uidoc = __revit__.ActiveUIDocument
 	options = __revit__.Application.Create.NewGeometryOptions()
-	intersectOptions = SolidCurveIntersectionOptions()
 
 	def __init__(self,bubble_name):
 		self.familysymbol = None		
@@ -30,8 +35,6 @@ class Bubble:
 				
 		for i in gm_collector:
 			if i.FamilyName == str(bubble_name):
-				#self.familyinstance = i
-				#self.familysymbol = i.Symbol
 				self.familysymbol = i
 				self.presence = True
 				break
@@ -39,89 +42,22 @@ class Bubble:
 		return self.familysymbol
 		return self.presence
 
-# # # # # ATTENTION : TROUVER LE MOYEN DE VIRER LES ELEMENTS NON VISIBLES DANS LA VUE
-class ListElements:
+def DocToOriginTransform(doc):
+	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	translationVector = XYZ(projectPosition.EastWest, projectPosition.NorthSouth, projectPosition.Elevation)
+	translationTransform = Transform.CreateTranslation(translationVector)
+	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition.Angle, XYZ.Zero)
+	finalTransform = translationTransform.Multiply(rotationTransform)
+	return finalTransform
 
-	def __init__(self):
-		self.element_list = []
-		self.doc_list = []
+def OriginToDocTransform(doc):
+	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	translationVector = XYZ(-projectPosition.EastWest, -projectPosition.NorthSouth, -projectPosition.Elevation)
+	translationTransform = Transform.CreateTranslation(translationVector)
+	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, -projectPosition.Angle, XYZ.Zero)
+	finalTransform = rotationTransform.Multiply(translationTransform)
+	return finalTransform
 
-		doc = __revit__.ActiveUIDocument.Document
-		uidoc = __revit__.ActiveUIDocument
-		options = __revit__.Application.Create.NewGeometryOptions()
-		
-		SectionBox = doc.ActiveView.GetSectionBox()
-		trans = SectionBox.Transform
-		min = SectionBox.Min
-		max = SectionBox.Max
-		
-		outline = Outline(trans.OfPoint(min),trans.OfPoint(max))
-		
-		# cat_list = [BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_DuctCurves,\
-					# BuiltInCategory.OST_DuctFitting, BuiltInCategory.OST_CableTray,\
-					# BuiltInCategory.OST_CableTrayFitting, BuiltInCategory.OST_StructuralFraming]
-					
-		# cat_list = [BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctCurves,\
-		# 			BuiltInCategory.OST_CableTray]
-					
-		cat_list = [BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctCurves,\
-					BuiltInCategory.OST_CableTray, BuiltInCategory.OST_StructuralFraming]
-		
-		rvtlink_collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
-				  .OfCategory(BuiltInCategory.OST_RvtLinks)\
-				  .WhereElementIsNotElementType()\
-				  .ToElements()
-		
-		dl_list = []
-		for rvtlink in rvtlink_collector:
-			dl_list.append(rvtlink)
-		dl_list.append(doc)
-
-		for cat in cat_list:
-			for dl in dl_list:
-				if dl.GetType().ToString() == "Autodesk.Revit.DB.Document":
-					element_collector = FilteredElementCollector(dl)\
-						.OfCategory(cat)\
-						.WhereElementIsNotElementType()\
-						.ToElements()
-					for e in element_collector:
-						if (e.GetType().ToString() == "Autodesk.Revit.DB.FamilyInstance") and (e.StructuralType.ToString() != "Beam"):
-							pass
-						else:
-							try:
-								bb2 = e.get_Geometry(options).GetBoundingBox()
-								outline2 = Outline(bb2.Min,bb2.Max)
-								filter1 = outline.ContainsOtherOutline(outline2,0)
-								filter2 = outline.Intersects(outline2,0)
-								if (filter1 is True) or (filter2 is True):
-									self.element_list.append(e)
-									self.doc_list.append(dl)
-							except:
-								pass
-				elif dl.GetType().ToString() == "Autodesk.Revit.DB.RevitLinkInstance":
-					element_collector = FilteredElementCollector(dl.GetLinkDocument())\
-						.OfCategory(cat)\
-						.WhereElementIsNotElementType()\
-						.ToElements()
-					for e in element_collector:
-						if (e.GetType().ToString() == "Autodesk.Revit.DB.FamilyInstance") and (e.StructuralType.ToString() != "Beam"):
-							pass
-						else:
-							try:
-								trans2 = dl.GetTotalTransform()
-								bb2 = e.get_Geometry(options).GetBoundingBox()
-								outline2 = Outline(trans2.OfPoint(bb2.Min),trans2.OfPoint(bb2.Max))
-								filter1 = outline.ContainsOtherOutline(outline2,0)
-								filter2 = outline.Intersects(outline2,0)
-								if (filter1 is True) or (filter2 is True):
-									self.element_list.append(e)
-									self.doc_list.append(dl)
-							except:
-								pass
-						
-		return self.element_list
-		return self.doc_list
-		
 def interpoint(el1, el2, doc1, doc2):
 
 	doc = __revit__.ActiveUIDocument.Document
@@ -221,15 +157,12 @@ def interpoint(el1, el2, doc1, doc2):
 			else:
 				solids_list = el2_solids_list
 				curves_list = el1_curves_list
-				
-			# # # # # TEST
 			
 			for k in solids_list:
 				for l in curves_list:
 					try:
 						solidcurveintersection = k.IntersectWithCurve(l,intersectOptions)
 						seg_nb = solidcurveintersection.SegmentCount
-						# if seg_nb <> 0:
 						if seg_nb != 0:
 							if x == 0:
 								point = solidcurveintersection.GetCurveSegment(0).GetEndPoint(0)
@@ -243,22 +176,6 @@ def interpoint(el1, el2, doc1, doc2):
 					except:
 						pass
 			
-			# for k in solids_list:
-				# for l in curves_list:
-					# solidcurveintersection = k.IntersectWithCurve(l,intersectOptions)
-					# seg_nb = solidcurveintersection.SegmentCount
-					# if seg_nb <> 0:
-						# if x == 0:
-							# point = solidcurveintersection.GetCurveSegment(0).GetEndPoint(0)
-							# break
-						# else:
-							# try:
-								# point = trans1.OfPoint(solidcurveintersection.GetCurveSegment(0).GetEndPoint(0))
-							# except:
-								# point = trans2.OfPoint(solidcurveintersection.GetCurveSegment(0).GetEndPoint(0))
-							# break
-				
-			# # # # # TEST
 			try:
 				return point
 			except:
@@ -266,35 +183,83 @@ def interpoint(el1, el2, doc1, doc2):
 		else:
 			return None
 
-doc = __revit__.ActiveUIDocument.Document
-uidoc = __revit__.ActiveUIDocument
-options = __revit__.Application.Create.NewGeometryOptions()
-intersectOptions = SolidCurveIntersectionOptions()
-
-# # # # # ATTENTION : AJOUTER CHECK SI VUE ACTIVE IS 3DVIEW
-
-# bname = "OBSERVATIONS_Test_NTA"
-bname = "Observation_Libelle SYA"
+bname = "OBSERVATIONS_2017"
 
 if Bubble(bname).presence is True:
+	cat_list = [BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctCurves,\
+				BuiltInCategory.OST_CableTray, BuiltInCategory.OST_StructuralFraming,\
+				BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_DuctFitting,\
+				BuiltInCategory.OST_CableTrayFitting, BuiltInCategory.OST_FlexPipeCurves]
 	
-	e_list = ListElements().element_list
-	d_list = ListElements().doc_list
+	rvtlink_collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
+			.OfCategory(BuiltInCategory.OST_RvtLinks)\
+			.WhereElementIsNotElementType()\
+			.ToElements()
+
+	SectionBox = doc.ActiveView.GetSectionBox()
+	trans = SectionBox.Transform
+	bbmin = SectionBox.Min
+	bbmax = SectionBox.Max
+	
+	dl_list = []
+	for rvtlink in rvtlink_collector:
+		dl_list.append(rvtlink)
+	dl_list.append(doc)
+
+	element_list = []
+	for cat in cat_list:
+		for dl in dl_list:
+			if dl.GetType().ToString() == "Autodesk.Revit.DB.Document":
+				outline = Outline(trans.OfPoint(bbmin),trans.OfPoint(bbmax))
+				bbFilter = BoundingBoxIntersectsFilter(outline)
+				element_collector = FilteredElementCollector(dl)\
+					.OfCategory(cat)\
+					.WherePasses(bbFilter)\
+					.WhereElementIsNotElementType()\
+					.ToElements()
+				for e in element_collector:
+					if (e.GetType().ToString() == "Autodesk.Revit.DB.FamilyInstance") and (e.StructuralType.ToString() != "Beam"):
+						pass
+					else:
+						element_list.append(e)
+			elif dl.GetType().ToString() == "Autodesk.Revit.DB.RevitLinkInstance":
+				docToOriginTrans = DocToOriginTransform(doc)
+				originToDocTrans = OriginToDocTransform(dl.GetLinkDocument())
+				docToDocTrans = originToDocTrans.Multiply(docToOriginTrans)
+				try:
+					outline = Outline(docToDocTrans.OfPoint(trans.OfPoint(bbmin)), docToDocTrans.OfPoint(trans.OfPoint(bbmax)))
+					bbFilter = BoundingBoxIntersectsFilter(outline)
+				except:
+					a = "Same base point"
+					outline = Outline(trans.OfPoint(bbmin), trans.OfPoint(bbmax))
+					bbFilter = BoundingBoxIntersectsFilter(outline)
+				element_collector = FilteredElementCollector(dl.GetLinkDocument())\
+					.OfCategory(cat)\
+					.WherePasses(bbFilter)\
+					.WhereElementIsNotElementType()\
+					.ToElements()
+				for e in element_collector:
+					if (e.GetType().ToString() == "Autodesk.Revit.DB.FamilyInstance") and (e.StructuralType.ToString() != "Beam"):
+						pass
+					else:
+						element_list.append(e)
+
+	print(element_list)
 	
 	tuple_list = []
 	point_list = []
 	k = 0
 	l = -1
-	for i in e_list:
+	for i in element_list:
 		l = l + 1
 		k = k + 1
-		for j in range(k, len(e_list)):
-			if interpoint(i, e_list[j], d_list[l], d_list[j]) is None:
+		for j in range(k, len(element_list)):
+			if interpoint(i, element_list[j], element_list[l].Document, element_list[j].Document) is None:
 				pass
 			else:
-				if interpoint(i, e_list[j], d_list[l], d_list[j]).ToString() not in tuple_list: 
-					point_list.append(interpoint(i, e_list[j], d_list[l], d_list[j]))
-					tuple_list.append(interpoint(i, e_list[j], d_list[l], d_list[j]).ToString())
+				if interpoint(i, element_list[j], element_list[l].Document, element_list[j].Document).ToString() not in tuple_list: 
+					point_list.append(interpoint(i, element_list[j], element_list[l].Document, element_list[j].Document))
+					tuple_list.append(interpoint(i, element_list[j], element_list[l].Document, element_list[j].Document).ToString())
 	
 	t = Transaction(doc, 'Place bubbles')
 	t.Start()
@@ -302,6 +267,3 @@ if Bubble(bname).presence is True:
 		print("Bubble placed")
 		instance = doc.Create.NewFamilyInstance(m, Bubble(bname).familysymbol, Structure.StructuralType.NonStructural)
 	t.Commit()
-	
-else:
-	print("Oh Lord!")
