@@ -1,4 +1,7 @@
+# # # # # Clash detection 2 # # # # #
+
 import clr
+import System
 import math
 clr.AddReference('RevitAPI') 
 clr.AddReference('RevitAPIUI') 
@@ -11,14 +14,422 @@ from rpw.ui.forms import TextInput
 doc = __revit__.ActiveUIDocument.Document
 uidoc = __revit__.ActiveUIDocument
 options = __revit__.Application.Create.NewGeometryOptions()
+copyOptions = CopyPasteOptions()
 
-value = TextInput('Title', default="")
-print(value)
+class Bubble:
+	doc = __revit__.ActiveUIDocument.Document
+	uidoc = __revit__.ActiveUIDocument
+	options = __revit__.Application.Create.NewGeometryOptions()
 
-def setParam(param, value):
-	if str(param.StorageType) == "Integer":
+	def __init__(self,bubble_name):
+		self.familysymbol = None		
+		self.presence = False
 		
+		gm_collector = FilteredElementCollector(doc)\
+			  .OfClass(FamilySymbol)\
+			  .OfCategory(BuiltInCategory.OST_GenericModel)
+				
+		for i in gm_collector:
+			if i.FamilyName == str(bubble_name):
+				self.familysymbol = i
+				self.presence = True
+				break
+				
+		return self.familysymbol
+		return self.presence
 
+def get_selected_elements(doc):
+    try:
+        # # Revit 2016
+        return [doc.GetElement(id)
+                for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
+    except:
+        # # old method
+        return list(__revit__.ActiveUIDocument.Selection.Elements)
+
+def DocToOriginTransform(doc):
+	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	translationVector = XYZ(projectPosition.EastWest, projectPosition.NorthSouth, projectPosition.Elevation)
+	translationTransform = Transform.CreateTranslation(translationVector)
+	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition.Angle, XYZ.Zero)
+	finalTransform = translationTransform.Multiply(rotationTransform)
+	return finalTransform
+
+def OriginToDocTransform(doc):
+	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	translationVector = XYZ(-projectPosition.EastWest, -projectPosition.NorthSouth, -projectPosition.Elevation)
+	translationTransform = Transform.CreateTranslation(translationVector)
+	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, -projectPosition.Angle, XYZ.Zero)
+	finalTransform = rotationTransform.Multiply(translationTransform)
+	return finalTransform
+
+def DocToDocTransform(doc1, doc2):
+	docToOriginTrans = DocToOriginTransform(doc1)
+	originToDocTrans = OriginToDocTransform(doc2)
+	docToDocTrans = originToDocTrans.Multiply(docToOriginTrans)
+	return docToDocTrans
+	# projectPosition1 = doc1.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	# projectPosition2 = doc2.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	# translationVector = XYZ(projectPosition2.EastWest-projectPosition1.EastWest, \
+	# 	projectPosition2.NorthSouth-projectPosition1.NorthSouth, \
+	# 	projectPosition2.Elevation-projectPosition1.Elevation)
+	# translationTransform = Transform.CreateTranslation(translationVector)
+	# rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition2.Angle-projectPosition1.Angle, \
+	# 	XYZ(projectPosition2.EastWest, projectPosition2.NorthSouth, projectPosition2.Elevation))
+	# # rotationTransform = Transform.CreateRotation(XYZ(0, 0, 1), projectPosition2.Angle-projectPosition1.Angle)
+	# finalTransform = translationTransform.Multiply(rotationTransform)
+	# return finalTransform
+
+	# projectPosition = doc1.ActiveProjectLocation.get_ProjectPosition(doc2.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero))
+	# translationVector = XYZ(projectPosition2.EastWest-projectPosition1.EastWest, \
+	# 	projectPosition2.NorthSouth-projectPosition1.NorthSouth, \
+	# 	projectPosition2.Elevation-projectPosition1.Elevation)
+	# translationTransform = Transform.CreateTranslation(translationVector)
+	# rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition2.Angle-projectPosition1.Angle, XYZ.Zero)
+	# finalTransform = translationTransform.Multiply(rotationTransform)
+	# return finalTransform
+
+def get_solid(element):
+	solid_list = []
+	for i in element.get_Geometry(options):
+		if i.ToString() == "Autodesk.Revit.DB.Solid":
+			solid_list.append(SolidUtils.CreateTransformed(i, DocToDocTransform(element.Document, __revit__.ActiveUIDocument.Document)))
+		elif i.ToString() == "Autodesk.Revit.DB.GeometryInstance":
+			for j in i.GetInstanceGeometry():
+				if j.ToString() == "Autodesk.Revit.DB.Solid":
+					solid_list.append(SolidUtils.CreateTransformed(j, DocToDocTransform(element.Document, __revit__.ActiveUIDocument.Document)))
+	return solid_list
+
+def get_intersection(el1, el2):
+	bb1 = el1.get_Geometry(options).GetBoundingBox()
+	bb2 = el2.get_Geometry(options).GetBoundingBox()
+
+	trans1 = bb1.Transform
+	trans2 = bb2.Transform
+
+	min1 = trans1.OfPoint(bb1.Min)
+	max1 = trans1.OfPoint(bb1.Max)
+	min2 = trans2.OfPoint(bb2.Min)
+	max2 = trans2.OfPoint(bb2.Max)
+
+	outline1 = Outline(min1, max1)
+	outline2 = Outline(min2, max2)
+
+	# print(outline1.Intersects(outline2,0))
+	# print(outline1.ContainsOtherOutline(outline2,0))
+	# print(outline2.ContainsOtherOutline(outline1,0))
+
+	solid1_list = get_solid(el1)
+	solid2_list = get_solid(el2)
+
+	for i in solid1_list:
+		for j in solid2_list:
+			try:
+				inter = BooleanOperationsUtils.ExecuteBooleanOperation(i, j, BooleanOperationsType.Intersect)
+				if inter.Volume != 0:
+					interBb = inter.GetBoundingBox()
+					interTrans = interBb.Transform
+					interPoint = interTrans.OfPoint(interBb.Min)
+					break
+			except:
+				"Oh god!"
+
+	try:
+		interPoint
+		return interPoint
+	except:
+		return None
+
+def get_elements_in_3Dview():
+	cat_list = [BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctCurves,\
+				BuiltInCategory.OST_CableTray, BuiltInCategory.OST_StructuralFraming,\
+				BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_DuctFitting,\
+				BuiltInCategory.OST_CableTrayFitting, BuiltInCategory.OST_FlexPipeCurves]
+	
+	rvtlink_collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
+			.OfCategory(BuiltInCategory.OST_RvtLinks)\
+			.WhereElementIsNotElementType()\
+			.ToElements()
+
+	SectionBox = doc.ActiveView.GetSectionBox()
+	trans = SectionBox.Transform
+	bbmin = SectionBox.Min
+	bbmax = SectionBox.Max
+
+	dl_list = []
+	for rvtlink in rvtlink_collector:
+		dl_list.append(rvtlink)
+	dl_list.append(doc)
+
+	element_list = []
+	for cat in cat_list:
+		for dl in dl_list:
+			if dl.GetType().ToString() == "Autodesk.Revit.DB.Document":
+				outline = Outline(trans.OfPoint(bbmin),trans.OfPoint(bbmax))
+				bbFilter = BoundingBoxIntersectsFilter(outline)
+				element_collector = FilteredElementCollector(dl)\
+					.OfCategory(cat)\
+					.WherePasses(bbFilter)\
+					.WhereElementIsNotElementType()\
+					.ToElements()
+				for e in element_collector:
+					if (e.GetType().ToString() == "Autodesk.Revit.DB.FamilyInstance") and (e.Category.Id.IntegerValue == -2001320) \
+							and (e.StructuralType.ToString() != "Beam"):
+						pass
+					else:
+						element_list.append(e)
+			elif dl.GetType().ToString() == "Autodesk.Revit.DB.RevitLinkInstance":
+				docToOriginTrans = DocToOriginTransform(doc)
+				originToDocTrans = OriginToDocTransform(dl.GetLinkDocument())
+				docToDocTrans = originToDocTrans.Multiply(docToOriginTrans)
+				try:
+					outline = Outline(docToDocTrans.OfPoint(trans.OfPoint(bbmin)), docToDocTrans.OfPoint(trans.OfPoint(bbmax)))
+					bbFilter = BoundingBoxIntersectsFilter(outline)
+				except:
+					a = "Same base point"
+					outline = Outline(trans.OfPoint(bbmin), trans.OfPoint(bbmax))
+					bbFilter = BoundingBoxIntersectsFilter(outline)
+				element_collector = FilteredElementCollector(dl.GetLinkDocument())\
+					.OfCategory(cat)\
+					.WherePasses(bbFilter)\
+					.WhereElementIsNotElementType()\
+					.ToElements()
+				for e in element_collector:
+					if (e.GetType().ToString() == "Autodesk.Revit.DB.FamilyInstance") and (e.Category.Id.IntegerValue == -2001320) \
+							and (e.StructuralType.ToString() != "Beam"):
+						pass
+					else:
+						element_list.append(e)
+	return element_list
+
+def get_docsolid(element, elementdoc, activedoc):
+	docToOriginTrans = DocToOriginTransform(elementdoc)
+	originToDocTrans = OriginToDocTransform(activedoc)
+
+	bb = element.get_Geometry(options).GetBoundingBox()
+	trans = bb.Transform
+	bbmin = originToDocTrans.OfPoint(docToOriginTrans.OfPoint(trans.OfPoint(bb.Min)))
+	bbmax = originToDocTrans.OfPoint(docToOriginTrans.OfPoint(trans.OfPoint(bb.Max)))
+
+	pt0 = XYZ(bbmin.X, bbmin.Y, bbmin.Z)
+	pt1 = XYZ(bbmax.X, bbmin.Y, bbmin.Z)
+	pt2 = XYZ(bbmax.X, bbmax.Y, bbmin.Z)
+	pt3 = XYZ(bbmin.X, bbmax.Y, bbmin.Z)
+
+	edge0 = Line.CreateBound(pt0, pt1)
+	edge1 = Line.CreateBound(pt1, pt2)
+	edge2 = Line.CreateBound(pt2, pt3)
+	edge3 = Line.CreateBound(pt3, pt0)
+
+	iCurveCollection = List[Curve]()
+	iCurveCollection.Add(edge0)
+	iCurveCollection.Add(edge1)
+	iCurveCollection.Add(edge2)
+	iCurveCollection.Add(edge3)
+	height = bbmax.Z - bbmin.Z
+	baseLoop = CurveLoop.Create(iCurveCollection)
+
+	iCurveLoopCollection = List[CurveLoop]()
+	iCurveLoopCollection.Add(baseLoop)
+
+	solid = GeometryCreationUtilities.CreateExtrusionGeometry(iCurveLoopCollection, XYZ.BasisZ, height)
+	
+	return solid
+
+def get_docoutline(element, elementdoc, activedoc):
+	docToOriginTrans = DocToOriginTransform(elementdoc)
+	originToDocTrans = OriginToDocTransform(activedoc)
+
+	bb = element.get_Geometry(options).GetBoundingBox()
+	trans = bb.Transform
+	bbmin = originToDocTrans.OfPoint(docToOriginTrans.OfPoint(trans.OfPoint(bb.Min)))
+	bbmax = originToDocTrans.OfPoint(docToOriginTrans.OfPoint(trans.OfPoint(bb.Max)))
+
+	outline = Outline(bbmin, bbmax)
+
+	return outline
+
+bname = "OBSERVATIONS_2017"
+# bname = "Observation_Libelle SYA"
+
+element_list = get_elements_in_3Dview()
+tuple_list = []
+point_list = []
+k = 0
+l = -1
+for i in element_list:
+	k = k + 1
+	for j in range(k, len(element_list)):
+		if (i.Category.Id.IntegerValue == -2001320) and (element_list[j].Category.Id.IntegerValue == -2001320):
+			"Beam intersection"
+		else:
+			interPoint = get_intersection(i, element_list[j])
+			if interPoint is None:
+				pass
+			else:
+				if interPoint.ToString() not in tuple_list:
+					point_list.append(interPoint)
+					tuple_list.append(interPoint.ToString())
+
+t = Transaction(doc, 'Place bubbles')
+t.Start()
+for m in point_list:
+	print("Bubble placed")
+	instance = doc.Create.NewFamilyInstance(m, Bubble(bname).familysymbol, Structure.StructuralType.NonStructural)
+t.Commit()
+
+
+
+
+
+
+# bname = "OBSERVATIONS_2017"
+
+# if Bubble(bname).presence is True:
+# 	cat_list = [BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctCurves,\
+# 				BuiltInCategory.OST_CableTray, BuiltInCategory.OST_StructuralFraming,\
+# 				BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_DuctFitting,\
+# 				BuiltInCategory.OST_CableTrayFitting, BuiltInCategory.OST_FlexPipeCurves]
+	
+# 	rvtlink_collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
+# 			.OfCategory(BuiltInCategory.OST_RvtLinks)\
+# 			.WhereElementIsNotElementType()\
+# 			.ToElements()
+
+# 	SectionBox = doc.ActiveView.GetSectionBox()
+# 	trans = SectionBox.Transform
+# 	bbmin = SectionBox.Min
+# 	bbmax = SectionBox.Max
+	
+# 	# outline = Outline(trans.OfPoint(min),trans.OfPoint(max))
+	
+# 	dl_list = []
+# 	for rvtlink in rvtlink_collector:
+# 		dl_list.append(rvtlink)
+# 	dl_list.append(doc)
+
+# 	element_list = []
+# 	for cat in cat_list:
+# 		for dl in dl_list:
+# 			if dl.GetType().ToString() == "Autodesk.Revit.DB.Document":
+# 				outline = Outline(trans.OfPoint(bbmin),trans.OfPoint(bbmax))
+# 				bbFilter = BoundingBoxIntersectsFilter(outline)
+# 				element_collector = FilteredElementCollector(dl)\
+# 					.OfCategory(cat)\
+# 					.WherePasses(bbFilter)\
+# 					.WhereElementIsNotElementType()\
+# 					.ToElements()
+# 				for e in element_collector:
+# 					if (e.GetType().ToString() == "Autodesk.Revit.DB.FamilyInstance") and (e.StructuralType.ToString() != "Beam"):
+# 						pass
+# 					else:
+# 						element_list.append(e)
+# 			elif dl.GetType().ToString() == "Autodesk.Revit.DB.RevitLinkInstance":
+# 				docToOriginTrans = DocToOriginTransform(doc)
+# 				originToDocTrans = OriginToDocTransform(dl.GetLinkDocument())
+# 				docToDocTrans = originToDocTrans.Multiply(docToOriginTrans)
+# 				try:
+# 					outline = Outline(docToDocTrans.OfPoint(trans.OfPoint(bbmin)), docToDocTrans.OfPoint(trans.OfPoint(bbmax)))
+# 					bbFilter = BoundingBoxIntersectsFilter(outline)
+# 				except:
+# 					a = "Same base point"
+# 					outline = Outline(trans.OfPoint(bbmin), trans.OfPoint(bbmax))
+# 					bbFilter = BoundingBoxIntersectsFilter(outline)
+# 				element_collector = FilteredElementCollector(dl.GetLinkDocument())\
+# 					.OfCategory(cat)\
+# 					.WherePasses(bbFilter)\
+# 					.WhereElementIsNotElementType()\
+# 					.ToElements()
+# 				for e in element_collector:
+# 					if (e.GetType().ToString() == "Autodesk.Revit.DB.FamilyInstance") and (e.StructuralType.ToString() != "Beam"):
+# 						pass
+# 					else:
+# 						element_list.append(e)
+
+# 	print(element_list)
+	
+# 	tuple_list = []
+# 	point_list = []
+# 	k = 0
+# 	l = -1
+# 	for i in element_list:
+# 		l = l + 1
+# 		k = k + 1
+# 		for j in range(k, len(element_list)):
+# 			if interpoint(i, element_list[j], element_list[l].Document, element_list[j].Document) is None:
+# 				pass
+# 			else:
+# 				if interpoint(i, element_list[j], element_list[l].Document, element_list[j].Document).ToString() not in tuple_list: 
+# 					point_list.append(interpoint(i, element_list[j], element_list[l].Document, element_list[j].Document))
+# 					tuple_list.append(interpoint(i, element_list[j], element_list[l].Document, element_list[j].Document).ToString())
+	
+# 	t = Transaction(doc, 'Place bubbles')
+# 	t.Start()
+# 	for m in point_list:
+# 		print("Bubble placed")
+# 		instance = doc.Create.NewFamilyInstance(m, Bubble(bname).familysymbol, Structure.StructuralType.NonStructural)
+# 	t.Commit()
+
+# # # # # Clash detection 2 # # # # #
+
+
+
+
+
+
+
+
+
+
+
+# def get_selected_elements(doc):
+#     try:
+#         # # Revit 2016
+#         return [doc.GetElement(id)
+#                 for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
+#     except:
+#         # # old method
+#         return list(__revit__.ActiveUIDocument.Selection.Elements)
+
+# el = get_selected_elements(doc)[0]
+# print("el:")
+# print(el)
+# print("dir(el)")
+# print(dir(el))
+# print("dir(el.location)")
+# print(dir(el.Location))
+# bb = el.get_Geometry(options).GetBoundingBox()
+# print(bb)
+# print("bbmin")
+# print(bb.Min)
+# print("bbmax")
+# print(bb.Max)
+# print("dir(bb)")
+# print(dir(bb))
+# print("category")
+# print(el.Category.Name)
+# print("el geometry object from reference")
+# a = el.GetGeometryObjectFromReference(Reference(el))
+# print(el.GetGeometryObjectFromReference(Reference(el)))
+# print("dir(a)")
+# print(dir(a))
+# print(bb.Bounds)
+
+# ceiling_collector = FilteredElementCollector(doc,doc.ActiveView.Id)\
+# 	.OfCategory(BuiltInCategory.OST_Ceilings)\
+# 	.WhereElementIsNotElementType()\
+# 	.ToElements()
+
+# hsfp_list = []
+# for i in ceiling_collector:
+# 	z = round(i.LookupParameter("D"+"\xe9"+"calage par rapport au niveau").AsDouble()/3.2808399, 2)
+# 	if (z not in hsfp_list) and (i.LookupParameter("Sous-projet").AsValueString() == "BPS_FXP"):
+# 		print(i.LookupParameter("Sous-projet").AsValueString())
+# 		print(z)
+# 		hsfp_list.append(z)
+	
+# for j in hsfp_list:
+# 	print(j)
 
 # import clr
 # import System
@@ -31,6 +442,37 @@ def setParam(param, value):
 # from pyrevit import forms
 # from rpw.ui.forms import TextInput
 # from rpw.ui.forms import (FlexForm, Label, ComboBox, TextBox, TextBox, Separator, Button)
+
+
+# >>>>>>>>>>>>>>>
+
+
+# beam_collector = FilteredElementCollector(doc,doc.ActiveView.Id)\
+# 	.OfCategory(BuiltInCategory.OST_StructuralFraming)\
+# 	.WhereElementIsNotElementType()\
+# 	.ToElements()
+
+# icollection = List[ElementId]()
+	
+# uidoc.Selection.SetElementIds(icollection)
+
+# for beam in beam_collector:
+# 	if beam.StructuralType.ToString() == "Beam":
+# 		bb = beam.get_Geometry(options).GetBoundingBox()
+# 		z = bb.Min.Z/3.2808399
+# 		if z-114.72<2.79 :
+# 			print(z)
+# 			print(beam.Id)
+# 			icollection.Add(beam.Id)
+# 		# "FABRICATION_LEVEL_PARAM"
+# 		# param = BuiltInParameter.STRUCTURAL_REFERENCE_LEVEL_ELEVATION
+# 		# print(param)
+# 		# zlevel = beam.get_Parameter(param).AsDouble()/3.2808399
+# 		# print(zlevel)
+# uidoc.Selection.SetElementIds(icollection)
+
+
+# <<<<<<<<<<<<<<<<<<<<<
 
 
 # doc = __revit__.ActiveUIDocument.Document
@@ -265,131 +707,3 @@ def setParam(param, value):
 
 # else:
 # 	"A plus tard!"
-
-
-# # """Etiquetage de poutres CANOPY!"""
-
-# # # -*- coding: utf-8 -*-
-# # e_a = str("\xe9")
-# # a_a = str("\xe0")
-
-# # __title__ = 'Beam tagging\nCANOPY'
-
-# # __doc__ = 'Ce programme remplit les arases inferieures mini et maxi des poutres '\
-# # 			'(parametres AI_Min et AI_Max) de la vue active du projet CANOPY'
-
-# # # from pyrevit import revit, DB, UI
-# # # from pyrevit import script
-# # # from pyrevit import forms
-
-# # import clr
-# # import math
-# # clr.AddReference('RevitAPI') 
-# # clr.AddReference('RevitAPIUI') 
-# # from Autodesk.Revit.DB import *
-# # from Autodesk.Revit.UI import * 
-
-# # doc = __revit__.ActiveUIDocument.Document
-
-# # options = __revit__.Application.Create.NewGeometryOptions()
-
-# # BP_collector = FilteredElementCollector(doc)\
-# #           .OfCategory(BuiltInCategory.OST_ProjectBasePoint)\
-# #           .WhereElementIsNotElementType()\
-# #           .ToElements()
-
-# # beam_collector = FilteredElementCollector(doc,doc.ActiveView.Id)\
-# #           .OfCategory(BuiltInCategory.OST_StructuralFraming)\
-# #           .WhereElementIsNotElementType()\
-# #           .ToElements()
-		  
-# # # beam_ID_collector = FilteredElementCollector(doc,doc.ActiveView.Id)\
-# #           # .OfCategory(BuiltInCategory.OST_StructuralFraming)\
-# #           # .WhereElementIsNotElementType()\
-# #           # .ToElementIds()
-		  
-# # # beam_tag_collector = FilteredElementCollector(doc,doc.ActiveView.Id)\
-# # 						# .OfCategory(BuiltInCategory.OST_StructuralFramingTags)\
-# # 						# .WhereElementIsNotElementType()\
-# # 						# .ToElements()
-						
-# # # TaggegBeamsList = []					
-# # # for bt in beam_tag_collector:
-# # 	# if bt.TaggedLocalElementId in beam_ID_collector:
-# # 		# TaggegBeamsList.append(bt.TaggedLocalElementId)
-		
-# # td_button = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.Cancel | TaskDialogCommonButtons.No
-
-# # res = TaskDialog.Show("Etiquetage de poutres","Voulez-vous lancer l'"+e_a+"tiquetage des poutres dans la vue active?",td_button)
-
-# if res == TaskDialogResult.Yes:
-
-# 	for BP in BP_collector:
-# 		# zBP = BP.get_Parameter(BuiltInParameter.BASEPOINT_ELEVATION_PARAM).AsDouble()/3.2808399
-# 		zBP = 0
-
-# 	print(zBP)
-
-# 	tg = TransactionGroup(doc, 'Tag all beams in active view')
-
-# 	tg.Start()
-
-# 	for beam in beam_collector:
-# 		# if beam.Id not in TaggegBeamsList:
-# 			try:
-# 				print("Nom de la poutre : " + beam.Name)
-# 				print("ID : " + str(beam.Id))
-# 				print("Niveau de r"+e_a+"f"+e_a+"rence : " + str(beam.LookupParameter('Niveau de r'+e_a+'f'+e_a+'rence').AsValueString()))
-# 				start = beam.Location.Curve.GetEndPoint(0)
-# 				print(start)
-# 				end = beam.Location.Curve.GetEndPoint(1)
-# 				print(end)
-# 				z_min = -zBP + ((beam.get_Geometry(options).GetBoundingBox().Min).Z)/3.2808399
-# 				print("AI_Inf : " + str(z_min) + "m")
-				
-# 				# Si la poutre est en pente
-# 				if beam.LookupParameter('El'+e_a+'vation '+a_a+' la base').AsDouble() == 0:
-# 					print("EN PENTE")
-# 					t = Transaction(doc, 'Tag beam')
-# 					t.Start()
-# 					try:
-# 						delta = abs(float(beam.LookupParameter("D"+e_a+"calage du niveau de d"+e_a+"part").AsValueString())-float(beam.LookupParameter("D"+e_a+"calage du niveau d'arriv"+e_a+"e").AsValueString()))\
-# 									+abs(float(beam.LookupParameter("Valeur de d"+e_a+"calage de l'extr"+e_a+"mit"+e_a+" Z").AsValueString())-float(beam.LookupParameter("Valeur de d"+e_a+"calage Z de d"+e_a+"but").AsValueString()))
-# 					except:
-# 						delta = abs(float(beam.LookupParameter("D"+e_a+"calage du niveau de d"+e_a+"part").AsValueString())-float(beam.LookupParameter("D"+e_a+"calage du niveau d'arriv"+e_a+"e").AsValueString()))
-# 					z_max = z_min + delta
-# 					print("AI_Max : " + str(z_max) + "m")
-# 					beam.LookupParameter('AI_Min').Set(" ")
-# 					beam.LookupParameter('AI_Min').Set(str(round(z_min,2)))
-# 					beam.LookupParameter('AI_Max').Set(" ")
-# 					beam.LookupParameter('AI_Max').Set(str(round(z_max,2)))
-# 					cen=XYZ((start.X+end.X)/2,(start.Y+end.Y)/2,(z_min+z_max)/2)
-# 					print(cen)
-# 					print("\n")
-# 					beam_tag = doc.Create.NewTag(doc.ActiveView,beam,False,TagMode.TM_ADDBY_CATEGORY,TagOrientation.Horizontal,cen)
-# 					t.Commit()
-# 				# Si la poutre est horizontale
-# 				else :
-# 					print("HORIZONTALE")
-# 					t = Transaction(doc, 'Tag beam')
-# 					t.Start()
-# 					beam.LookupParameter('AI_Min').Set(" ")
-# 					beam.LookupParameter('AI_Min').Set(str(round(z_min,2)))
-# 					beam.LookupParameter('AI_Max').Set(" ")
-# 					cen=XYZ((start.X+end.X)/2,(start.Y+end.Y)/2,z_min)
-# 					print(cen)
-# 					print("\n")
-# 					beam_tag = doc.Create.NewTag(doc.ActiveView,beam,False,TagMode.TM_ADDBY_CATEGORY,TagOrientation.Horizontal,cen)
-# 					t.Commit()
-			
-# 			except:
-# 				print(" ")
-				
-# 	tg.Assimilate()
-	
-# 	td_button2 = TaskDialogCommonButtons.Ok
-
-# 	res2 = TaskDialog.Show("Mise au propre","Veuillez checker la non superposition des "+e_a+"tiquettes pour un r"+e_a+"sultat plus lisible!",td_button2)
-
-# else :
-# 	print("Une autre fois peut-etre...")

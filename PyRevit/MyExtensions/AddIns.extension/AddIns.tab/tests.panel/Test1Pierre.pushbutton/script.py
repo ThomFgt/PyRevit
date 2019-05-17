@@ -152,6 +152,9 @@
 
 
 
+
+
+
 # # import clr
 # # import math
 # # clr.AddReference('RevitAPI') 
@@ -221,6 +224,11 @@
 
 
 
+
+
+
+
+
 # # import clr
 # # import math
 # # clr.AddReference('RevitAPI') 
@@ -272,7 +280,6 @@
 
 
 
-
 import clr
 import math
 clr.AddReference('RevitAPI') 
@@ -285,139 +292,350 @@ from rpw.ui.forms import TextInput
 
 doc = __revit__.ActiveUIDocument.Document
 uidoc = __revit__.ActiveUIDocument
+options = __revit__.Application.Create.NewGeometryOptions()
 
-class CheckBoxOption:
-	def __init__(self, name, default_state=False):
-		self.name = name
-		self.state = default_state
+def get_selected_elements(doc):
+    try:
+        # # Revit 2016
+        return [doc.GetElement(id)
+                for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
+    except:
+        # # old method
+        return list(__revit__.ActiveUIDocument.Selection.Elements)
 
-	def __nonzero__(self):
-		return self.state
+def DocToOriginTransform(doc):
+	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	translationVector = XYZ(projectPosition.EastWest, projectPosition.NorthSouth, projectPosition.Elevation)
+	translationTransform = Transform.CreateTranslation(translationVector)
+	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition.Angle, XYZ.Zero)
+	finalTransform = translationTransform.Multiply(rotationTransform)
+	return finalTransform
 
-	def __bool__(self):
-		return self.state
+def OriginToDocTransform(doc):
+	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	translationVector = XYZ(-projectPosition.EastWest, -projectPosition.NorthSouth, -projectPosition.Elevation)
+	translationTransform = Transform.CreateTranslation(translationVector)
+	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, -projectPosition.Angle, XYZ.Zero)
+	finalTransform = rotationTransform.Multiply(translationTransform)
+	return finalTransform
 
-view_list = ["La vue active", "Tout le document"]
-res1 = forms.SelectFromList.show(view_list,
-									multiselect = False,
-									name_attr = "Vue",
-									button_name = "OK")
+def DocToDocTransform(doc1, doc2):
+	projectPosition1 = doc1.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	projectPosition2 = doc2.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	translationVector = XYZ(projectPosition1.EastWest-projectPosition2.EastWest, \
+		projectPosition1.NorthSouth-projectPosition2.NorthSouth, \
+		projectPosition1.Elevation-projectPosition2.Elevation)
+	translationTransform = Transform.CreateTranslation(translationVector)
+	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition1.Angle-projectPosition2.Angle, XYZ.Zero)
+	finalTransform = translationTransform.Multiply(rotationTransform)
+	return finalTransform
 
-if res1 != None:
-	if res1[0] == "La vue active":
-		collector = FilteredElementCollector(doc, doc.ActiveView.Id)
-	else:
-		collector = FilteredElementCollector(doc)
-
-	categories = doc.Settings.Categories
-	cat_dir = {}
-	for cat in categories:
-		cat_dir[cat.Name] = cat
-
-	# categories = doc.Settings.Categories
-	# cat_dir = {}
-	# bic_dir = {}
-	# for bic in BuiltInCategory.GetValues(BuiltInCategory):
-	# 	cat = categories.get_Item(bic)
-	# 	print(cat)
-	# 	catName = cat.Name
-	# 	cat_dir[catName] = cat
-	# 	bic_dir[catName] = bic
-
-	# print(cat_dir.values()[0])
-	# print(bic_dir.values()[0])
-
-	cat_list = cat_dir.keys()
-	options = [CheckBoxOption(j) for j in cat_list]
-
-	all_checkboxes = forms.SelectFromCheckBoxes.show(options)
-
-	res2 = []
-	for checkbox in all_checkboxes:
-		if checkbox.state == True:
-			res2.append(checkbox.name)
-
-	chosenCat_list = [cat_dir[x] for x in res2]
-
-	icatcollection = List[ElementId]()
-	elementFilter = List[ElementFilter](len(chosenCat_list))
-	for i in chosenCat_list:
-		icatcollection.Add(i.Id)
-		elementFilter.Add(ElementCategoryFilter(i.Id))
-
-	paramFilter = ParameterFilterUtilities.GetFilterableParametersInCommon(doc,icatcollection)
-
-	bip_dir = {}
-	bipName_dir = {}
-	for bip in BuiltInParameter.GetValues(BuiltInParameter):
-		bipId = str(ElementId(bip).IntegerValue)
-		bip_dir[bipId] = bip
-		try:
-			bipName = LabelUtils.GetLabelFor(bip)
-		except:
-			bipName = bip.ToString()
-		bipName_dir[bipId] = bipName
-
-	param_dir = {}
-	for paramId in paramFilter:
-		if paramId.IntegerValue < 0:
-			paramName = bipName_dir[str(paramId.IntegerValue)]
-			param = bip_dir[str(paramId.IntegerValue)]
-			param_dir[paramName] = param
-		else:
-			paramName = doc.GetElement(paramId).Name
-			param = doc.GetElement(paramId)
-			param_dir[paramName] = param
+def get_solid(element):
+	solid_list = []
+	for i in element.get_Geometry(options):
+		if i.ToString() == "Autodesk.Revit.DB.Solid":
+			solid_list.append(SolidUtils.CreateTransformed(i, DocToDocTransform(element.Document, __revit__.ActiveUIDocument.Document)))
+		elif i.ToString() == "Autodesk.Revit.DB.GeometryInstance":
+			for j in i.GetInstanceGeometry():
+				if j.ToString() == "Autodesk.Revit.DB.Solid":
+					solid_list.append(SolidUtils.CreateTransformed(j, DocToDocTransform(element.Document, __revit__.ActiveUIDocument.Document)))
+	return solid_list
 
 
-	res3 = forms.SelectFromList.show(param_dir.keys(),
-										multiselect = False,
-										name_attr = "Parametre",
-										button_name = "OK")
+def get_docsolid(element, elementdoc, activedoc):
+	docToOriginTrans = DocToOriginTransform(elementdoc)
+	originToDocTrans = OriginToDocTransform(activedoc)
 
-	if res3 != None:
-		value = TextInput('Value', default="Parameter value")
-		chosenParam = param_dir[res3[0]]
-		categoryFilter = LogicalOrFilter(elementFilter)
-		# element_collector = FilteredElementCollector(searchRange)\
-		# 	.OfCategoryId(cat.Id)\
-		# 	.WhereElementIsNotElementType()\
-		# 	.ToElements()
-		element_collector = collector\
-			.WhereElementIsNotElementType()\
-			.WherePasses(categoryFilter)\
-			.ToElements()
+	bb = element.get_Geometry(options).GetBoundingBox()
+	trans = bb.Transform
+	bbmin = originToDocTrans.OfPoint(docToOriginTrans.OfPoint(trans.OfPoint(bb.Min)))
+	bbmax = originToDocTrans.OfPoint(docToOriginTrans.OfPoint(trans.OfPoint(bb.Max)))
 
-		icollection = List[ElementId]()
-		for e in element_collector:
-			print(e)
+	pt0 = XYZ(bbmin.X, bbmin.Y, bbmin.Z)
+	pt1 = XYZ(bbmax.X, bbmin.Y, bbmin.Z)
+	pt2 = XYZ(bbmax.X, bbmax.Y, bbmin.Z)
+	pt3 = XYZ(bbmin.X, bbmax.Y, bbmin.Z)
+
+	edge0 = Line.CreateBound(pt0, pt1)
+	edge1 = Line.CreateBound(pt1, pt2)
+	edge2 = Line.CreateBound(pt2, pt3)
+	edge3 = Line.CreateBound(pt3, pt0)
+
+	iCurveCollection = List[Curve]()
+	iCurveCollection.Add(edge0)
+	iCurveCollection.Add(edge1)
+	iCurveCollection.Add(edge2)
+	iCurveCollection.Add(edge3)
+	height = bbmax.Z - bbmin.Z
+	baseLoop = CurveLoop.Create(iCurveCollection)
+
+	iCurveLoopCollection = List[CurveLoop]()
+	iCurveLoopCollection.Add(baseLoop)
+
+	solid = GeometryCreationUtilities.CreateExtrusionGeometry(iCurveLoopCollection, XYZ.BasisZ, height)
+	
+	return solid
+
+def get_intersection(el1, el2):
+	bb1 = el1.get_Geometry(options).GetBoundingBox()
+	bb2 = el2.get_Geometry(options).GetBoundingBox()
+
+	trans1 = bb1.Transform
+	trans2 = bb2.Transform
+
+	min1 = trans1.OfPoint(bb1.Min)
+	max1 = trans1.OfPoint(bb1.Max)
+	min2 = trans2.OfPoint(bb2.Min)
+	max2 = trans2.OfPoint(bb2.Max)
+
+	outline1 = Outline(min1, max1)
+	outline2 = Outline(min2, max2)
+
+	solid1_list = get_solid(el1)
+	solid2_list = get_solid(el2)
+
+	for i in solid1_list:
+		for j in solid2_list:
 			try:
-				p = e.get_Parameter(chosenParam.GuidValue)
-				print(p)
-				print(p.StorageType)
-				if (str(p.StorageType) == "Integer") and (str(p.AsString()) == str(value)):
-					icollection.Add(e.Id)
-				elif (str(p.StorageType) == "String") and (str(p.AsValueString()) == str(value)):
-					icollection.Add(e.Id)
-				elif (str(p.StorageType) == "Double") and (str(p.AsDouble()) == str(value)):
-					icollection.Add(e.Id)
-				elif (str(p.StorageType) == "ElementId") and (str(p.AsValueString()) == str(value)):
-					icollection.Add(e.Id)
+				inter = BooleanOperationsUtils.ExecuteBooleanOperation(i, j, BooleanOperationsType.Intersect)
+				if inter.Volume != 0:
+					interBb = inter.GetBoundingBox()
+					interTrans = interBb.Transform
+					interPoint = interTrans.OfPoint(interBb.Min)
+					break
 			except:
-				p = e.get_Parameter(chosenParam)
-				print(p)
-				print(p.StorageType)
-				if (str(p.StorageType) == "Integer") and (str(p.AsString()) == str(value)):
-					icollection.Add(e.Id)
-				elif (str(p.StorageType) == "String") and (str(p.AsValueString()) == str(value)):
-					icollection.Add(e.Id)
-				elif (str(p.StorageType) == "Double") and (str(p.AsDouble()) == str(value)):
-					icollection.Add(e.Id)
-				elif (str(p.StorageType) == "ElementId") and (str(p.AsValueString()) == str(value)):
-					icollection.Add(e.Id)
+				"Oh god!"
 
-		uidoc.Selection.SetElementIds(icollection)
-	else:
-		"bye"
-else:
-	"bye"
+	try:
+		interPoint
+		return interPoint
+	except:
+		return None
+
+# el1 = get_selected_elements(doc)[0]
+# el2 = get_selected_elements(doc)[1]
+
+# print(get_intersection(el1, el2))
+
+el = get_selected_elements(doc)[0]
+print(el.Id)
+
+bubbleBb = el.get_Geometry(options).GetBoundingBox()
+bubbleTrans = bubbleBb.Transform
+bubbleOutline = Outline(bubbleTrans.OfPoint(bubbleBb.Min), bubbleTrans.OfPoint(bubbleBb.Max))
+bbFilter = BoundingBoxIntersectsFilter(bubbleOutline)
+gm_collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
+		.OfCategory(BuiltInCategory.OST_GenericModel)\
+		.WherePasses(bbFilter)\
+		.WhereElementIsNotElementType()\
+		.ToElements()
+
+for i in gm_collector:
+	print(i)
+	print(i.Id)
+# import clr
+# import math
+# clr.AddReference('RevitAPI') 
+# clr.AddReference('RevitAPIUI') 
+# from Autodesk.Revit.DB import *
+# from Autodesk.Revit.UI import *
+# from System.Collections.Generic import List
+# from pyrevit import forms
+# from rpw.ui.forms import TextInput
+
+# doc = __revit__.ActiveUIDocument.Document
+# uidoc = __revit__.ActiveUIDocument
+# options = __revit__.Application.Create.NewGeometryOptions()
+
+# print(dir(Transform))
+
+# def get_selected_elements(doc):
+#     try:
+#         # # Revit 2016
+#         return [doc.GetElement(id)
+#                 for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
+#     except:
+#         # # old method
+#         return list(__revit__.ActiveUIDocument.Selection.Elements)
+
+# def GetProjectLocationTransform(doc):
+# 	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+# 	translationVector = XYZ(projectPosition.EastWest, projectPosition.NorthSouth, projectPosition.Elevation)
+# 	translationTransform = Transform.CreateTranslation(translationVector)
+# 	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition.Angle, XYZ.Zero)
+# 	finalTransform = translationTransform.Multiply(rotationTransform)
+# 	return finalTransform
+
+# bpfilter = ElementCategoryFilter(BuiltInCategory.OST_ProjectBasePoint)
+# bp = FilteredElementCollector(doc).WherePasses(bpfilter).ToElements()[0]
+
+# xbp = bp.get_Parameter(BuiltInParameter.BASEPOINT_EASTWEST_PARAM).AsDouble()
+# ybp = bp.get_Parameter(BuiltInParameter.BASEPOINT_NORTHSOUTH_PARAM).AsDouble()
+# zbp = bp.get_Parameter(BuiltInParameter.BASEPOINT_ELEVATION_PARAM).AsDouble()
+# print("xbp = " + str(xbp))
+# print("ybp = " + str(ybp))
+# print("zbp = " + str(zbp))
+
+# plTrans = GetProjectLocationTransform(doc)
+
+# el = get_selected_elements(doc)[0]
+# print(el.UniqueId)
+# bb = el.get_Geometry(options).GetBoundingBox()
+# trans = bb.Transform
+# print(bb.Max)
+# print(trans.OfPoint(bb.Max))
+# print(plTrans.OfPoint(trans.OfPoint(bb.Max)))
+
+
+
+
+
+
+# import clr
+# import math
+# clr.AddReference('RevitAPI') 
+# clr.AddReference('RevitAPIUI') 
+# from Autodesk.Revit.DB import *
+# from Autodesk.Revit.UI import *
+# from System.Collections.Generic import List
+# from pyrevit import forms
+# from rpw.ui.forms import TextInput
+
+# doc = __revit__.ActiveUIDocument.Document
+# uidoc = __revit__.ActiveUIDocument
+
+# class CheckBoxOption:
+# 	def __init__(self, name, default_state=False):
+# 		self.name = name
+# 		self.state = default_state
+
+# 	def __nonzero__(self):
+# 		return self.state
+
+# 	def __bool__(self):
+# 		return self.state
+
+# view_list = ["La vue active", "Tout le document"]
+# res1 = forms.SelectFromList.show(view_list,
+# 									multiselect = False,
+# 									name_attr = "Vue",
+# 									button_name = "OK")
+
+# if res1 != None:
+# 	if res1[0] == "La vue active":
+# 		collector = FilteredElementCollector(doc, doc.ActiveView.Id)
+# 	else:
+# 		collector = FilteredElementCollector(doc)
+
+# 	categories = doc.Settings.Categories
+# 	cat_dir = {}
+# 	for cat in categories:
+# 		cat_dir[cat.Name] = cat
+
+# 	# categories = doc.Settings.Categories
+# 	# cat_dir = {}
+# 	# bic_dir = {}
+# 	# for bic in BuiltInCategory.GetValues(BuiltInCategory):
+# 	# 	cat = categories.get_Item(bic)
+# 	# 	print(cat)
+# 	# 	catName = cat.Name
+# 	# 	cat_dir[catName] = cat
+# 	# 	bic_dir[catName] = bic
+
+# 	# print(cat_dir.values()[0])
+# 	# print(bic_dir.values()[0])
+
+# 	cat_list = cat_dir.keys()
+# 	options = [CheckBoxOption(j) for j in cat_list]
+
+# 	all_checkboxes = forms.SelectFromCheckBoxes.show(options)
+
+# 	res2 = []
+# 	for checkbox in all_checkboxes:
+# 		if checkbox.state == True:
+# 			res2.append(checkbox.name)
+
+# 	chosenCat_list = [cat_dir[x] for x in res2]
+
+# 	icatcollection = List[ElementId]()
+# 	elementFilter = List[ElementFilter](len(chosenCat_list))
+# 	for i in chosenCat_list:
+# 		icatcollection.Add(i.Id)
+# 		elementFilter.Add(ElementCategoryFilter(i.Id))
+
+# 	paramFilter = ParameterFilterUtilities.GetFilterableParametersInCommon(doc,icatcollection)
+
+# 	bip_dir = {}
+# 	bipName_dir = {}
+# 	for bip in BuiltInParameter.GetValues(BuiltInParameter):
+# 		bipId = str(ElementId(bip).IntegerValue)
+# 		bip_dir[bipId] = bip
+# 		try:
+# 			bipName = LabelUtils.GetLabelFor(bip)
+# 		except:
+# 			bipName = bip.ToString()
+# 		bipName_dir[bipId] = bipName
+
+# 	param_dir = {}
+# 	for paramId in paramFilter:
+# 		if paramId.IntegerValue < 0:
+# 			paramName = bipName_dir[str(paramId.IntegerValue)]
+# 			param = bip_dir[str(paramId.IntegerValue)]
+# 			param_dir[paramName] = param
+# 		else:
+# 			paramName = doc.GetElement(paramId).Name
+# 			param = doc.GetElement(paramId)
+# 			param_dir[paramName] = param
+
+
+# 	res3 = forms.SelectFromList.show(param_dir.keys(),
+# 										multiselect = False,
+# 										name_attr = "Parametre",
+# 										button_name = "OK")
+
+# 	if res3 != None:
+# 		value = TextInput('Value', default="Parameter value")
+# 		chosenParam = param_dir[res3[0]]
+# 		categoryFilter = LogicalOrFilter(elementFilter)
+# 		# element_collector = FilteredElementCollector(searchRange)\
+# 		# 	.OfCategoryId(cat.Id)\
+# 		# 	.WhereElementIsNotElementType()\
+# 		# 	.ToElements()
+# 		element_collector = collector\
+# 			.WhereElementIsNotElementType()\
+# 			.WherePasses(categoryFilter)\
+# 			.ToElements()
+
+# 		icollection = List[ElementId]()
+# 		for e in element_collector:
+# 			# print(e)
+# 			try:
+# 				p = e.get_Parameter(chosenParam.GuidValue)
+# 				# print(p)
+# 				# print(p.StorageType)
+# 				if (str(p.StorageType) == "Integer") and (str(p.AsString()) == str(value)):
+# 					icollection.Add(e.Id)
+# 				elif (str(p.StorageType) == "String") and (str(p.AsString()) == str(value)):
+# 					icollection.Add(e.Id)
+# 				elif (str(p.StorageType) == "Double") and (str(p.AsDouble()) == str(value)):
+# 					icollection.Add(e.Id)
+# 				elif (str(p.StorageType) == "ElementId") and (str(p.AsValueString()) == str(value)):
+# 					icollection.Add(e.Id)
+# 			except:
+# 				p = e.get_Parameter(chosenParam)
+# 				# print(p)
+# 				# print(p.StorageType)
+# 				if (str(p.StorageType) == "Integer") and (str(p.AsString()) == str(value)):
+# 					icollection.Add(e.Id)
+# 				elif (str(p.StorageType) == "String") and (str(p.AsString()) == str(value)):
+# 					icollection.Add(e.Id)
+# 				elif (str(p.StorageType) == "Double") and (str(p.AsDouble()) == str(value)):
+# 					icollection.Add(e.Id)
+# 				elif (str(p.StorageType) == "ElementId") and (str(p.AsValueString()) == str(value)):
+# 					icollection.Add(e.Id)
+
+# 		uidoc.Selection.SetElementIds(icollection)
+# 	else:
+# 		"bye"
+# else:
+# 	"bye"
