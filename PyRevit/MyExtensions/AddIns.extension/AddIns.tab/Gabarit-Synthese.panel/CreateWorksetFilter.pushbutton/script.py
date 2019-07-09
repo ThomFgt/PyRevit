@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-__title__ = 'Workset Filter'
+__title__ = 'Link Workset Filter'
 
 __doc__ = "Ce programme créé et ajoute des filtres de couleur sur les sous-projets des maquettes en lien. Filtres appliqués sur la vue active. Fonctionne avec Revit 2018"
 
@@ -177,7 +177,16 @@ typeCatList = List[DB.ElementId](catlist)
 collector_maq = DB.FilteredElementCollector(revit.doc)
 linkInstances = collector_maq.OfClass(DB.RevitLinkInstance)
 linkDoc = [links.GetLinkDocument() for links in linkInstances]
+none_index = [i for i, link in enumerate(linkDoc) if link==None]
 linkDoc_name = [link.Name for link in linkInstances]
+for index in none_index:
+	linkDoc_name.pop(index) #remove unload link by finding None in linkDoc
+linkDoc_name.insert(0, "Mon document")
+
+#COLLECT WORKSETS IN DOC
+collect = DB.FilteredWorksetCollector(revit.doc)
+collect_worksets = collect.OfKind(DB.WorksetKind.UserWorkset)
+worksets_name_doc = [workset.Name for workset in collect_worksets]
 
 # COLLECT WORKSETS LINKS
 collector_maq = DB.FilteredElementCollector(revit.doc)
@@ -189,8 +198,9 @@ for j in range(len(linkDoc)):
 		collector_link = DB.FilteredWorksetCollector(linkDoc[j])
 		collect_worksets_link = collector_link.OfKind(DB.WorksetKind.UserWorkset)
 		worksets_name_link.append([workset.Name for workset in collect_worksets_link])
-	except : pass # if link is unload, don't collect his worksets
-	
+	except : pass 
+worksets_name_link.insert(0, worksets_name_doc)	
+
 # COLOR LIST
 color_list = ["bleu","rouge","vert","jaune","orange","marron","rose","violet","bleu clair"]
 
@@ -201,9 +211,9 @@ data_out = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
 # /////////////////////////////////////////////////////////////////////////
 # START WINDOWS FORM
 class MyListBox(Form):
-	"""docstring for ClassName"""
+	# docstring for ClassName
 	def __init__(self):
-		self.Text = "Ma form cool"
+		self.Text = "Plugin link workset filter"
 		screenSize = Screen.GetWorkingArea(self)
 		self.Height = screenSize.Height / 2
 		self.Width = screenSize.Width / 3
@@ -212,7 +222,7 @@ class MyListBox(Form):
 	# label for listbox 1 on the left
 		label1 = Label()
 		label1.Parent = self
-		label1.Text = "la liste 1"
+		label1.Text = "Liens chargés"
 		label1.Location = Point(5,5)
 	# listbox 1 on the left
 		self.listbox1 = ListBox()
@@ -226,7 +236,7 @@ class MyListBox(Form):
 	# label for listbox 2 on the middle
 		label2 = Label()
 		label2.Parent = self
-		label2.Text = "la liste 2"
+		label2.Text = "Sous-projets liens"
 		label2.Location = Point(200,5)
 	# listbox 2 on the middle
 		self.listbox2 = ListBox() 
@@ -238,7 +248,7 @@ class MyListBox(Form):
 	# label for listbox 3 on the right
 		label3 = Label()
 		label3.Parent = self
-		label3.Text = "la liste 3"
+		label3.Text = "Choix couleurs"
 		label3.Location = Point(400,5)
 	# listbox 3 on the right
 		self.listbox3 = ListBox()
@@ -394,15 +404,22 @@ if okgo :
 		else : 
 			EndWell = True
 			with db.Transaction('create workset'):
+				if not revit.doc.IsWorkshared :
+					EndWell = False
+					print "Erreur\n\nLe projet n'est pas en collaboration, impossible de créer un sous-projet."
+					break 
 				try:
 					new_workset = DB.Workset.Create(revit.doc, str(data_out[j][1]))
 					worksetId = str(new_workset.Id)
 					elemId = DB.ElementId(int(worksetId))
 					workset_parameter = DB.ElementId(DB.BuiltInParameter.ELEM_PARTITION_PARAM) #BuiltinParam for workset
 				except :
-					EndWell = False
-					print "Erreur\n\nSoit le projet n'est pas en collaboration, impossible de créer un sous-projet.\n\nSoit, un nom des nouveaux sous-projets existe déjà. Le sous-projet ---%s--- n'a pas été créé car il existe déjà." %data_out[j][1]
-					break
+					workset_parameter = DB.ElementId(DB.BuiltInParameter.ELEM_PARTITION_PARAM) #if workset name already exist
+					collect = DB.FilteredWorksetCollector(revit.doc)
+					collect_worksets = collect.OfKind(DB.WorksetKind.UserWorkset)
+					worksets_name_doc = [workset.Name for workset in collect_worksets]
+					worksets_id_doc = [workset.Id for workset in collect_worksets]
+					elemId = DB.ElementId(int(str(worksets_id_doc[worksets_name_doc.index(str(data_out[j][1]))])))
 			with db.Transaction('create rule'):
 				rule = [DB.ParameterFilterRuleFactory.CreateEqualsRule(workset_parameter,elemId)]
 
@@ -420,9 +437,18 @@ if okgo :
 			with db.Transaction('set filter overrides'):
 				ogs = DB.OverrideGraphicSettings()
 				ogs.SetProjectionFillColor(dico_couleur[str(data_out[j][2])])
-				ogs.SetProjectionFillPatternId(ElementId(4))
+				try :
+					ogs.SetProjectionFillPatternId((DB.FillPatternElement.GetFillPatternElementByName(revit.doc, DB.FillPatternTarget.Drafting, "Uni").Id))
+				except :
+					ogs.SetProjectionFillPatternId((DB.FillPatternElement.GetFillPatternElementByName(revit.doc, DB.FillPatternTarget.Drafting, "<Remplissage de solide>").Id))
 				ogs.SetProjectionFillPatternVisible(True)
 				ogs.SetSurfaceTransparency(80)
+				ogs.SetCutFillColor(dico_couleur[str(data_out[j][2])])
+				try :
+					ogs.SetCutFillPatternId((DB.FillPatternElement.GetFillPatternElementByName(revit.doc, DB.FillPatternTarget.Drafting, "Uni").Id))
+				except :
+					ogs.SetCutFillPatternId((DB.FillPatternElement.GetFillPatternElementByName(revit.doc, DB.FillPatternTarget.Drafting, "<Remplissage de solide>").Id))
+				ogs.SetCutFillPatternVisible(True)
 				DB.View.SetFilterOverrides(revit.doc.ActiveView , new_filter.Id , ogs)
 	if EndWell:
 		print "Finito !\nSi les filtres ont été créés mais n'ont pas eu d'effet sur la vue active alors il faut parcourir la liste des filtres créés dans la fenêtre -ajouter/Modifier- les filtres puis cliquer sur OK."
