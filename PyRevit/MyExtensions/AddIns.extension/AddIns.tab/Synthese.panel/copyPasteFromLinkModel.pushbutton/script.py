@@ -27,7 +27,10 @@ copyOptions = CopyPasteOptions()
 # print(acad.doc.Name)
 
 def DocToOriginTransform(doc):
-	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	try:
+		projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	except:
+		projectPosition = doc.ActiveProjectLocation.GetProjectPosition(XYZ.Zero)
 	translationVector = XYZ(projectPosition.EastWest, projectPosition.NorthSouth, projectPosition.Elevation)
 	translationTransform = Transform.CreateTranslation(translationVector)
 	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition.Angle, XYZ.Zero)
@@ -35,12 +38,21 @@ def DocToOriginTransform(doc):
 	return finalTransform
 
 def OriginToDocTransform(doc):
-	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	try:
+		projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	except:
+		projectPosition = doc.ActiveProjectLocation.GetProjectPosition(XYZ.Zero)
 	translationVector = XYZ(-projectPosition.EastWest, -projectPosition.NorthSouth, -projectPosition.Elevation)
 	translationTransform = Transform.CreateTranslation(translationVector)
 	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, -projectPosition.Angle, XYZ.Zero)
 	finalTransform = rotationTransform.Multiply(translationTransform)
 	return finalTransform
+	
+def DocToDocTransform(doc1, doc2):
+	docToOriginTrans = DocToOriginTransform(doc1)
+	originToDocTrans = OriginToDocTransform(doc2)
+	docToDocTrans = originToDocTrans.Multiply(docToOriginTrans)
+	return docToDocTrans
 
 def get_selected_elements(doc):
     try:
@@ -70,56 +82,57 @@ if doc.ActiveView.GetType().ToString() == "Autodesk.Revit.DB.View3D":
 	# print("ybp = " + str(ybp))
 	# print("zbp = " + str(zbp))
 
-	try:
-		bb = doc.ActiveView.GetSectionBox()
-	except:
-		bb = doc.ActiveView.SectionBox
+
+	bb = doc.ActiveView.GetSectionBox()
+
 
 	trans = bb.Transform
 	docToOriginTrans = DocToOriginTransform(doc)
 	originToDocTrans = OriginToDocTransform(linkdoc)
 	docToDocTrans = originToDocTrans.Multiply(docToOriginTrans)
-	print(docToDocTrans.OfPoint(trans.OfPoint(bb.Min)))
-	print(docToDocTrans.OfPoint(trans.OfPoint(bb.Max)))
-	print(trans.OfPoint(bb.Min))
-	print(trans.OfPoint(bb.Max))
+	
 	try:
 		a = ""
 		outline = Outline(docToDocTrans.OfPoint(trans.OfPoint(bb.Min)), docToDocTrans.OfPoint(trans.OfPoint(bb.Max)))
 		bbFilter = BoundingBoxIntersectsFilter(outline)
 	except:
 		a = "Same base point"
-		outline = Outline(trans.OfPoint(bb.Min), trans.OfPoint(bb.Max))
+		bbmin = docToDocTrans.OfPoint(trans.OfPoint(bb.Min))
+		bbmax = docToDocTrans.OfPoint(trans.OfPoint(bb.Max))
+		
+		outmin = XYZ(min(bbmin.X,bbmax.X), min(bbmin.Y,bbmax.Y), min(bbmin.Z,bbmax.Z))
+		outmax = XYZ(max(bbmin.X,bbmax.X), max(bbmin.Y,bbmax.Y), max(bbmin.Z,bbmax.Z))
+		outline = Outline(outmin, outmax)
 		bbFilter = BoundingBoxIntersectsFilter(outline)
-
-	# ElementOwnerViewFilter
-
-	# element_collector = FilteredElementCollector(linkdoc)\
-	# 	.OfClass(FamilyInstance)\
-	# 	.WherePasses(bbFilter)\
-	# 	.WhereElementIsNotElementType()\
-	# 	.ToElements()
+		
 
 	element_collector = FilteredElementCollector(linkdoc)\
 		.WherePasses(bbFilter)\
 		.WhereElementIsNotElementType()\
 		.ToElements()
-
-	# elementId_collector = FilteredElementCollector(linkdoc)\
-	# 	.OfClass(FamilyInstance)\
-	# 	.WherePasses(bbFilter)\
-	# 	.WhereElementIsNotElementType()\
-	# 	.ToElementIds()
+		
+	# element_collector = FilteredElementCollector(linkdoc)\
+		# .OfCategory(BuiltInCategory.OST_Floors)\
+		# .WherePasses(bbFilter)\
+		# .WhereElementIsNotElementType()\
+		# .ToElements()
 
 	elementId_collector = FilteredElementCollector(linkdoc)\
 		.WherePasses(bbFilter)\
 		.WhereElementIsNotElementType()\
 		.ToElementIds()
+		
+	# elementId_collector = FilteredElementCollector(linkdoc)\
+		# .OfCategory(BuiltInCategory.OST_Floors)\
+		# .WherePasses(bbFilter)\
+		# .WhereElementIsNotElementType()\
+		# .ToElementIds()
 
 	for e in element_collector:
-		print(e)
-		print(e.ViewSpecific)
-		if e.ViewSpecific is True:
+		try:
+			if (e.ViewSpecific is True) or (e.Category.CategoryType.ToString() == "Annotation"):
+				elementId_collector.Remove(e.Id)
+		except:
 			elementId_collector.Remove(e.Id)
 
 	t = Transaction(doc,"Copy and paste from selected link")

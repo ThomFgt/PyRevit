@@ -48,7 +48,10 @@ def get_selected_elements(doc):
         return list(__revit__.ActiveUIDocument.Selection.Elements)
 
 def DocToOriginTransform(doc):
-	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	try:
+		projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	except:
+		projectPosition = doc.ActiveProjectLocation.GetProjectPosition(XYZ.Zero)
 	translationVector = XYZ(projectPosition.EastWest, projectPosition.NorthSouth, projectPosition.Elevation)
 	translationTransform = Transform.CreateTranslation(translationVector)
 	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition.Angle, XYZ.Zero)
@@ -56,7 +59,10 @@ def DocToOriginTransform(doc):
 	return finalTransform
 
 def OriginToDocTransform(doc):
-	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	try:
+		projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
+	except:
+		projectPosition = doc.ActiveProjectLocation.GetProjectPosition(XYZ.Zero)
 	translationVector = XYZ(-projectPosition.EastWest, -projectPosition.NorthSouth, -projectPosition.Elevation)
 	translationTransform = Transform.CreateTranslation(translationVector)
 	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, -projectPosition.Angle, XYZ.Zero)
@@ -68,26 +74,6 @@ def DocToDocTransform(doc1, doc2):
 	originToDocTrans = OriginToDocTransform(doc2)
 	docToDocTrans = originToDocTrans.Multiply(docToOriginTrans)
 	return docToDocTrans
-	# projectPosition1 = doc1.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
-	# projectPosition2 = doc2.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
-	# translationVector = XYZ(projectPosition2.EastWest-projectPosition1.EastWest, \
-	# 	projectPosition2.NorthSouth-projectPosition1.NorthSouth, \
-	# 	projectPosition2.Elevation-projectPosition1.Elevation)
-	# translationTransform = Transform.CreateTranslation(translationVector)
-	# rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition2.Angle-projectPosition1.Angle, \
-	# 	XYZ(projectPosition2.EastWest, projectPosition2.NorthSouth, projectPosition2.Elevation))
-	# # rotationTransform = Transform.CreateRotation(XYZ(0, 0, 1), projectPosition2.Angle-projectPosition1.Angle)
-	# finalTransform = translationTransform.Multiply(rotationTransform)
-	# return finalTransform
-
-	# projectPosition = doc1.ActiveProjectLocation.get_ProjectPosition(doc2.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero))
-	# translationVector = XYZ(projectPosition2.EastWest-projectPosition1.EastWest, \
-	# 	projectPosition2.NorthSouth-projectPosition1.NorthSouth, \
-	# 	projectPosition2.Elevation-projectPosition1.Elevation)
-	# translationTransform = Transform.CreateTranslation(translationVector)
-	# rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition2.Angle-projectPosition1.Angle, XYZ.Zero)
-	# finalTransform = translationTransform.Multiply(rotationTransform)
-	# return finalTransform
 
 def get_solid(element):
 	solid_list = []
@@ -165,8 +151,16 @@ def get_elements_in_3Dview():
 	for cat in cat_list:
 		for dl in dl_list:
 			if dl.GetType().ToString() == "Autodesk.Revit.DB.Document":
-				outline = Outline(trans.OfPoint(bbmin),trans.OfPoint(bbmax))
-				bbFilter = BoundingBoxIntersectsFilter(outline)
+				try:
+					outline = Outline(trans.OfPoint(bbmin),trans.OfPoint(bbmax))
+					bbFilter = BoundingBoxIntersectsFilter(outline)
+				except:
+					bbmin2 = trans.OfPoint(bbmin)
+					bbmax2 = trans.OfPoint(bbmax)
+					outmin = XYZ(min(bbmin2.X,bbmax2.X), min(bbmin2.Y,bbmax2.Y), min(bbmin2.Z,bbmax2.Z))
+					outmax = XYZ(max(bbmin2.X,bbmax2.X), max(bbmin2.Y,bbmax2.Y), max(bbmin2.Z,bbmax2.Z))
+					outline = Outline(outmin, outmax)
+					bbFilter = BoundingBoxIntersectsFilter(outline)
 				element_collector = FilteredElementCollector(dl)\
 					.OfCategory(cat)\
 					.WherePasses(bbFilter)\
@@ -186,8 +180,12 @@ def get_elements_in_3Dview():
 					outline = Outline(docToDocTrans.OfPoint(trans.OfPoint(bbmin)), docToDocTrans.OfPoint(trans.OfPoint(bbmax)))
 					bbFilter = BoundingBoxIntersectsFilter(outline)
 				except:
-					a = "Same base point"
-					outline = Outline(trans.OfPoint(bbmin), trans.OfPoint(bbmax))
+					bbmin2 = docToDocTrans.OfPoint(trans.OfPoint(bbmin))
+					bbmax2 = docToDocTrans.OfPoint(trans.OfPoint(bbmax))
+					outmin = XYZ(min(bbmin2.X,bbmax2.X), min(bbmin2.Y,bbmax2.Y), min(bbmin2.Z,bbmax2.Z))
+					outmax = XYZ(max(bbmin2.X,bbmax2.X), max(bbmin2.Y,bbmax2.Y), max(bbmin2.Z,bbmax2.Z))
+					outline = Outline(outmin, outmax)
+					# outline = Outline(trans.OfPoint(bbmin), trans.OfPoint(bbmax))
 					bbFilter = BoundingBoxIntersectsFilter(outline)
 				element_collector = FilteredElementCollector(dl.GetLinkDocument())\
 					.OfCategory(cat)\
@@ -253,6 +251,7 @@ bname = "OBSERVATIONS_2017"
 # bname = "Observation_Libelle SYA"
 
 element_list = get_elements_in_3Dview()
+print(element_list)
 tuple_list = []
 point_list = []
 k = 0
