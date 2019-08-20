@@ -393,15 +393,19 @@ app = uidoc.Application.Application
 
 # # OST_FillPatterns
 
-# collector = FilteredElementCollector(doc)\
-# 		.OfClass(FillPatternElement)\
-# 		.WhereElementIsNotElementType()
+# # collector = FilteredElementCollector(doc)\
+# # 		.OfClass(FillPatternElement)\
+# # 		.WhereElementIsNotElementType()
+
+# collector = FilteredElementCollector(doc).OfClass(FilledRegionType)
 
 # # collector = FilteredElementCollector(doc)\
 # # 		.OfClass(FillPatternElement)
 
 # # collector = FilteredElementCollector(doc)\
 # # 		.OfCategory(BuiltInCategory.OST_FillPatterns)
+
+
 
 # for i in collector:
 # 	print(i.Name)
@@ -410,139 +414,80 @@ app = uidoc.Application.Application
 
 
 
-# # # # # COLORISE LES POUTRES
-# def select_colors(n):
-# 	rouge = (255, 0, 0)
-# 	jaune = (255, 255, 0)
-# 	vert = (0, 255, 0)
-# 	ls = []
-# 	if n == 1:
-# 		ls.append(jaune)
-# 		return ls
-# 	else:
-# 		tupple_list = []
-# 		d = 510 / (n-1)
-# 		for i in range(0, n):
-# 			x = i * d
-# 			if x < 255:
-# 				tupple_list.append((255, x, 0))
-# 			else:
-# 				tupple_list.append((510-x, 255, 0))
-# 		return tupple_list
-
-# # def get_selected_elements(doc):
-# #     try:
-# #         # # Revit 2016
-# #         return [doc.GetElement(id)
-# #                 for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
-# #     except:
-# #         # # old method
-# #         return list(__revit__.ActiveUIDocument.Selection.Elements)
-
-
-
-# filter_list = {}
-# filterCollector = FilteredElementCollector(doc).OfClass(ParameterFilterElement).ToElements()
-# for f in filterCollector:
-# 	filter_list[f.Name] = f
-
-# # sharedParameter_list = []
-# cat = Category.GetCategory(doc, BuiltInCategory.OST_StructuralFraming)
-# icatcollection = List[ElementId]()
-# elementFilter = List[ElementFilter](1)
-# icatcollection.Add(cat.Id)
-# elementFilter.Add(ElementCategoryFilter(BuiltInCategory.OST_StructuralFraming))
-
-# paramFilter = ParameterFilterUtilities.GetFilterableParametersInCommon(doc,icatcollection)
-
-# param = None
-# for paramId in paramFilter:
-# 	if paramId.IntegerValue > 0:
-# 		paramName = doc.GetElement(paramId).Name
-# 		# sharedParameter_list.append(paramName)
-# 		if paramName == "BPS_Ai poutres":
-# 			param = doc.GetElement(paramId)
-
-
-# # if "BPS_Ai poutres" not in sharedParameter_list:
-# # 	print("Please create a shared parameter (length) nammed 'BPS_Ai poutres' for beams")
-
-# if param is None:
-# 	print("Please create a shared parameter (length) nammed 'BPS_Ai poutres' for beams")
-
-# else:
-# 	level_collector = FilteredElementCollector(doc)\
-# 					.OfCategory(BuiltInCategory.OST_Levels)\
-# 					.WhereElementIsNotElementType()\
-# 					.ToElements()
-
-# 	collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
-# 					.OfCategory(BuiltInCategory.OST_StructuralFraming)\
-# 					.WhereElementIsNotElementType()\
-# 					.ToElements()
-
-# 	level_list = {}
-# 	for l in level_collector:
-# 		level_list[l.Name] = l.Elevation
-
-# 	elevation_list = sorted(level_list.values())
-
-# 	t1 = Transaction(doc, 'Fill Ai_Poutres parameters')
-# 	t1.Start()
-
-# 	Ai_list = []
-# 	Aim_list = []
-# 	for e in collector:
-# 		bb = e.get_Geometry(options).GetBoundingBox()
-# 		trans = bb.Transform
-# 		minPoint = trans.OfPoint(bb.Min)
-# 		zMin = minPoint.Z
-
-# 		i = 0
-# 		for el in elevation_list:
-# 			i = i + 1
-# 			if zMin >= el:
-# 				pass
-# 			else:
-# 				Ai = zMin - elevation_list[i-2]
-# 				break
-
-# 		Aim = str(round(UnitUtils.ConvertFromInternalUnits(Ai, DisplayUnitType.DUT_METERS),3))
-
-# 		elementParam = e.LookupParameter("BPS_Ai poutres")
-# 		elementParam.Set(Ai)
-# 		if Aim not in Aim_list:
-# 			Ai_list.append(Ai)
-# 			Aim_list.append(Aim)
-
-# 	t1.Commit()
-
-# 	Ai_list = sorted(Ai_list)
-# 	Aim_list = sorted(Aim_list)
-
-# 	print(Ai_list)
-# 	print(Aim_list)
-
-# 	n = len(Ai_list)
-# 	t2 = Transaction(doc, "Color beams")
-# 	t2.Start()
-# 	# FAIRE BOUCLE SUR TOUTES LES POUTRES ET CHOISIR LA COULEUR EN FONCTION DE LA VALEUR DE Ai
-# 	for e in collector:
-# 		elementParam = e.LookupParameter("BPS_Ai poutres")
-# 		print(e.AsDouble())
-
-
-
-# 	doc.Regenerate()
-# 	uidoc.RefreshActiveView()
-
-# 	t2.Commit()
-# # # # # COLORISE LES POUTRES
 
 
 
 
-# # # # # COLORISE UN ELEMENT
+
+# # # # # USE REVIT FORMS
+# a = TextBox
+# a.Name = "TB"
+# a.Visible = True
+# a.Enabled = True
+# # # # # USE REVIT FORMS
+
+
+
+
+
+
+
+
+
+# def get_selected_elements(doc):
+#     try:
+#         # # Revit 2016
+#         return [doc.GetElement(id)
+#                 for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
+#     except:
+#         # # old method
+#         return list(__revit__.ActiveUIDocument.Selection.Elements)
+
+# e = get_selected_elements(doc)
+# for i in e:
+# 	print(i.LookupParameter("Ai NVP").AsDouble())
+
+
+
+
+# insulationId = InsulationLiningBase.GetInsulationIds(doc, e.Id)[0]
+# e1 = doc.GetElement(insulationId)
+# print(e1.LookupParameter("Sous-projet").AsValueString())
+
+# wsparam = e.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM)
+# wsparamId = wsparam.Id
+
+
+# provider = ParameterValueProvider(wsparamId)
+# evaluator = FilterStringEquals()
+# wsparamValue = "13_CVP_CVC_Aeraulique"
+# rule = FilterStringRule(provider, evaluator, wsparamValue, False)
+# wsfilter = ElementParameterFilter(rule)
+
+# collector = FilteredElementCollector(doc, doc.ActiveView.Id).WherePasses(wsfilter).ToElementIds()
+
+# uidoc.Selection.SetElementIds(collector)
+
+# print(wsparam.StorageType)
+# print(wsparam.AsInteger())
+# print(wsparam.AsValueString())
+
+
+
+
+
+
+
+
+# collector = FilteredElementCollector(doc).OfClass(ParameterValue)
+# for i in collector:
+# 	print(i)
+# 	print(i.GetType())
+# 	print(i.ToString())
+# 	break
+
+
+# # # # # NUMEROTE BULLES
 # def get_selected_elements(doc):
 #     try:
 #         # # Revit 2016
@@ -553,27 +498,56 @@ app = uidoc.Application.Application
 #         return list(__revit__.ActiveUIDocument.Selection.Elements)
 
 
+# e = get_selected_elements(doc)[0]
+# level = e.LookupParameter("Niveau").AsValueString()
+# name = e.Name
 
-# el = get_selected_elements(doc)[0]
-# ogs = OverrideGraphicSettings()
-# color = Color(255, 0, 0)
-# ogs.SetProjectionFillColor(color)
-# ogs.SetCutFillColor(color)
-# fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "Uni")
-# ogs.SetProjectionFillPatternId(fillPatternElement.Id)
-# ogs.SetCutFillPatternId(fillPatternElement.Id)
-# ogs.SetSurfaceTransparency(50)
-# ogs.SetProjectionFillPatternVisible(True)
-# ogs.SetCutFillPatternVisible(True)
-# t = Transaction(doc, 'Color element')
-# t.Start()
-# doc.ActiveView.SetElementOverrides(el.Id, ogs)
-# t.Commit()
-# # # # # COLORISE UN ELEMENT
+# collector = FilteredElementCollector(doc)\
+# 				.OfCategory(BuiltInCategory.OST_GenericModel)\
+# 				.WhereElementIsNotElementType()\
+# 				.ToElements()
+
+# num_list = []
+# j = 0
+# for i in collector:
+# 	level_i = i.LookupParameter("Niveau").AsValueString()
+# 	name_i = i.Name
+# 	if (level_i == level) and (name_i == name):
+# 		j = j + 1
+# 		num_i = i.LookupParameter("BPS - Num"+str("\xe9")+"ro").AsString()
+# 		num_list.append(int(num_i))
+# 		if num_i != str(j):
+# 			print(j)
+# 			t = Transaction(doc, 'Number bubble')
+# 			t.Start()
+# 			# i.LookupParameter("BPS - Num"+str("\xe9")+"ro").Set(str(j))
+# 			e.LookupParameter("BPS - Num"+str("\xe9")+"ro").Set(str(j))
+# 			t.Commit()
+# 			break
+
+# print(num_list)
+# num_sorted_list = sorted(num_list)
+# print(num_sorted_list)
+# # # # # NUMEROTE BULLES
 
 
 
 
+
+# # # # # ZOOM SUR ELEMENT SELECTIONNE
+def get_selected_elements(doc):
+    try:
+        # # Revit 2016
+        return [doc.GetElement(id)
+                for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
+    except:
+        # # old method
+        return list(__revit__.ActiveUIDocument.Selection.Elements)
+
+
+e = get_selected_elements(doc)[0]
+
+# # # # # ZOOM SUR ELEMENT SELECTIONNE
 
 
 
@@ -685,123 +659,248 @@ app = uidoc.Application.Application
 
 # # # # # Check RSO
 
-def get_solid(element):
-	solid_list = []
-	for i in element.get_Geometry(options):
-		if i.ToString() == "Autodesk.Revit.DB.Solid":
-			solid_list.append(i)
-		elif i.ToString() == "Autodesk.Revit.DB.GeometryInstance":
-			for j in i.GetInstanceGeometry():
-				if j.ToString() == "Autodesk.Revit.DB.Solid":
-					solid_list.append(j)
-	return solid_list
+# def get_solid(element):
+# 	solid_list = []
+# 	for i in element.get_Geometry(options):
+# 		if i.ToString() == "Autodesk.Revit.DB.Solid":
+# 			solid_list.append(i)
+# 		elif i.ToString() == "Autodesk.Revit.DB.GeometryInstance":
+# 			for j in i.GetInstanceGeometry():
+# 				if j.ToString() == "Autodesk.Revit.DB.Solid":
+# 					solid_list.append(j)
+# 	return solid_list
 
-def get_intersection(el1, el2):
-	bb1 = el1.get_Geometry(options).GetBoundingBox()
-	bb2 = el2.get_Geometry(options).GetBoundingBox()
+# def get_intersection(el1, el2):
+# 	bb1 = el1.get_Geometry(options).GetBoundingBox()
+# 	bb2 = el2.get_Geometry(options).GetBoundingBox()
 
-	trans1 = bb1.Transform
-	trans2 = bb2.Transform
+# 	trans1 = bb1.Transform
+# 	trans2 = bb2.Transform
 
-	min1 = trans1.OfPoint(bb1.Min)
-	max1 = trans1.OfPoint(bb1.Max)
-	min2 = trans2.OfPoint(bb2.Min)
-	max2 = trans2.OfPoint(bb2.Max)
+# 	min1 = trans1.OfPoint(bb1.Min)
+# 	max1 = trans1.OfPoint(bb1.Max)
+# 	min2 = trans2.OfPoint(bb2.Min)
+# 	max2 = trans2.OfPoint(bb2.Max)
 
-	outline1 = Outline(min1, max1)
-	outline2 = Outline(min2, max2)
+# 	outline1 = Outline(min1, max1)
+# 	outline2 = Outline(min2, max2)
 
-	solid1_list = get_solid(el1)
-	solid2_list = get_solid(el2)
+# 	solid1_list = get_solid(el1)
+# 	solid2_list = get_solid(el2)
 
-	for i in solid1_list:
-		for j in solid2_list:
-			try:
-				inter = BooleanOperationsUtils.ExecuteBooleanOperation(i, j, BooleanOperationsType.Intersect)
-				if inter.Volume != 0:
-					interBb = inter.GetBoundingBox()
-					interTrans = interBb.Transform
-					interPoint = interTrans.OfPoint(interBb.Min)
-					break
-			except:
-				"Oh god!"
+# 	for i in solid1_list:
+# 		for j in solid2_list:
+# 			try:
+# 				inter = BooleanOperationsUtils.ExecuteBooleanOperation(i, j, BooleanOperationsType.Intersect)
+# 				if inter.Volume != 0:
+# 					interBb = inter.GetBoundingBox()
+# 					interTrans = interBb.Transform
+# 					interPoint = interTrans.OfPoint(interBb.Min)
+# 					break
+# 			except:
+# 				"Oh god!"
 
-	try:
-		interPoint
-		return interPoint
-	except:
-		return None
+# 	try:
+# 		interPoint
+# 		return interPoint
+# 	except:
+# 		return None
 
-def ColorElement(e):
-	ogs = OverrideGraphicSettings()
-	color = Color(255, 0, 0)
-	ogs.SetProjectionFillColor(color)
-	ogs.SetCutFillColor(color)
-	try:
-		fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "Uni")
-		fillPatternElement.GetFillPattern().IsSolidFill
-	except:
-		fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "<Remplissage de solide>")
-	ogs.SetProjectionFillPatternId(fillPatternElement.Id)
-	ogs.SetCutFillPatternId(fillPatternElement.Id)
-	ogs.SetSurfaceTransparency(50)
-	ogs.SetProjectionFillPatternVisible(True)
-	ogs.SetCutFillPatternVisible(True)
-	# t = Transaction(doc, 'Color element')
-	# t.Start()
-	doc.ActiveView.SetElementOverrides(e.Id, ogs)
-	# t.Commit()
+# def ColorElement(e):
+# 	ogs = OverrideGraphicSettings()
+# 	color = Color(255, 0, 0)
+# 	ogs.SetProjectionFillColor(color)
+# 	ogs.SetCutFillColor(color)
+# 	try:
+# 		fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "Uni")
+# 		fillPatternElement.GetFillPattern().IsSolidFill
+# 	except:
+# 		fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "<Remplissage de solide>")
+# 	ogs.SetProjectionFillPatternId(fillPatternElement.Id)
+# 	ogs.SetCutFillPatternId(fillPatternElement.Id)
+# 	ogs.SetSurfaceTransparency(50)
+# 	ogs.SetProjectionFillPatternVisible(True)
+# 	ogs.SetCutFillPatternVisible(True)
+# 	# t = Transaction(doc, 'Color element')
+# 	# t.Start()
+# 	doc.ActiveView.SetElementOverrides(e.Id, ogs)
+# 	# t.Commit()
 
 
 
-cat_list = [BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctCurves,\
-			BuiltInCategory.OST_CableTray, BuiltInCategory.OST_FlexPipeCurves]
+# cat_list = [BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctCurves,\
+# 			BuiltInCategory.OST_CableTray, BuiltInCategory.OST_FlexPipeCurves]
 
-icatcollection = List[BuiltInCategory]()
-for cat in cat_list:
-	icatcollection.Add(cat)
+# icatcollection = List[BuiltInCategory]()
+# for cat in cat_list:
+# 	icatcollection.Add(cat)
 
-multiCatFilter = ElementMulticategoryFilter(icatcollection)
+# multiCatFilter = ElementMulticategoryFilter(icatcollection)
 
-collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
-				.WherePasses(multiCatFilter)\
-				.WhereElementIsNotElementType()\
-				.ToElements()
+# collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
+# 				.WherePasses(multiCatFilter)\
+# 				.WhereElementIsNotElementType()\
+# 				.ToElements()
 
-t = Transaction(doc, 'Check RSO')
-t.Start()
-element_list = []
-k = 0
-for e1 in collector:
-	try:
-		insulationId = InsulationLiningBase.GetInsulationIds(doc, e1.Id)[0]
-		e1 = doc.GetElement(insulationId)
-	except:
-		"e1 not insulated"
-	k = k + 1
-	for j in range(k, len(collector)):
-		e2 = collector[j]
-		try:
-			insulationId2 = InsulationLiningBase.GetInsulationIds(doc, e2.Id)[0]
-			e2 = doc.GetElement(insulationId2)
-		except:
-			"e2 not insulated"
-		
-		if get_intersection(e1, e2) is not None:
-			ColorElement(e1)
-			ColorElement(e2)
-			# print("e1 :")
-			# print(e1.Id)
-			# print("e2 :")
-			# print(e2.Id)
-			# for e12 in e1.GetDependentElements(e2):
-			# 	print(e12)
-			# for e21 in e2.GetDependentElements(e1):
-			# 	print(e21)
+# t = Transaction(doc, 'Check RSO')
+# t.Start()
+# for e1 in collector:
+# 	try:
+# 		insulationId = InsulationLiningBase.GetInsulationIds(doc, e1.Id)[0]
+# 		e1 = doc.GetElement(insulationId)
+# 	except:
+# 		"e1 not insulated"
 
-t.Commit()
+# 	bb = e1.get_Geometry(options).GetBoundingBox()
+# 	trans = bb.Transform
+# 	outline = Outline(trans.OfPoint(bb.Min), trans.OfPoint(bb.Max))
+# 	bbFilter = BoundingBoxIntersectsFilter(outline)
+
+# 	totalFilter = LogicalAndFilter(multiCatFilter, bbFilter)
+
+# 	collector2 = FilteredElementCollector(doc, doc.ActiveView.Id)\
+# 					.WherePasses(totalFilter)\
+# 					.WhereElementIsNotElementType()\
+# 					.ToElements()
+
+# 	for e2 in collector2:
+# 		try:
+# 			insulationId2 = InsulationLiningBase.GetInsulationIds(doc, e2.Id)[0]
+# 			e2 = doc.GetElement(insulationId2)
+# 		except:
+# 			"e2 not insulated"
+# 		if e1.Id.IntegerValue != e2.Id.IntegerValue:
+# 			if get_intersection(e1, e2) is not None:
+# 				ColorElement(e1)
+# 				ColorElement(e2)
+
+# t.Commit()
 
 # # # # # Check RSO
+
+
+
+
+
+
+# # # # # Check BEAM
+
+# def get_solid(element):
+# 	solid_list = []
+# 	for i in element.get_Geometry(options):
+# 		if i.ToString() == "Autodesk.Revit.DB.Solid":
+# 			solid_list.append(i)
+# 		elif i.ToString() == "Autodesk.Revit.DB.GeometryInstance":
+# 			for j in i.GetInstanceGeometry():
+# 				if j.ToString() == "Autodesk.Revit.DB.Solid":
+# 					solid_list.append(j)
+# 	return solid_list
+
+# def get_intersection(el1, el2):
+# 	bb1 = el1.get_Geometry(options).GetBoundingBox()
+# 	bb2 = el2.get_Geometry(options).GetBoundingBox()
+
+# 	trans1 = bb1.Transform
+# 	trans2 = bb2.Transform
+
+# 	min1 = trans1.OfPoint(bb1.Min)
+# 	max1 = trans1.OfPoint(bb1.Max)
+# 	min2 = trans2.OfPoint(bb2.Min)
+# 	max2 = trans2.OfPoint(bb2.Max)
+
+# 	outline1 = Outline(min1, max1)
+# 	outline2 = Outline(min2, max2)
+
+# 	solid1_list = get_solid(el1)
+# 	solid2_list = get_solid(el2)
+
+# 	for i in solid1_list:
+# 		for j in solid2_list:
+# 			try:
+# 				inter = BooleanOperationsUtils.ExecuteBooleanOperation(i, j, BooleanOperationsType.Intersect)
+# 				if inter.Volume != 0:
+# 					interBb = inter.GetBoundingBox()
+# 					interTrans = interBb.Transform
+# 					interPoint = interTrans.OfPoint(interBb.Min)
+# 					break
+# 			except:
+# 				"Oh god!"
+
+# 	try:
+# 		interPoint
+# 		return interPoint
+# 	except:
+# 		return None
+
+# def ColorElement(e):
+# 	ogs = OverrideGraphicSettings()
+# 	color = Color(255, 0, 0)
+# 	ogs.SetProjectionFillColor(color)
+# 	ogs.SetCutFillColor(color)
+# 	try:
+# 		fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "Uni")
+# 		fillPatternElement.GetFillPattern().IsSolidFill
+# 	except:
+# 		fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "<Remplissage de solide>")
+# 	ogs.SetProjectionFillPatternId(fillPatternElement.Id)
+# 	ogs.SetCutFillPatternId(fillPatternElement.Id)
+# 	ogs.SetSurfaceTransparency(50)
+# 	ogs.SetProjectionFillPatternVisible(True)
+# 	ogs.SetCutFillPatternVisible(True)
+# 	# t = Transaction(doc, 'Color element')
+# 	# t.Start()
+# 	doc.ActiveView.SetElementOverrides(e.Id, ogs)
+# 	# t.Commit()
+
+# def get_selected_elements(doc):
+#     try:
+#         # # Revit 2016
+#         return [doc.GetElement(id)
+#                 for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
+#     except:
+#         # # old method
+#         return list(__revit__.ActiveUIDocument.Selection.Elements)
+
+# STRcollector = FilteredElementCollector(doc, doc.ActiveView.Id)\
+# 				.OfCategory(BuiltInCategory.OST_StructuralFraming)\
+# 				.WhereElementIsNotElementType()\
+# 				.ToElements()
+
+# t = Transaction(doc, 'Check BEAM')
+# t.Start()
+# for e in STRcollector:
+# 	# e = get_selected_elements(doc)[0]
+
+# 	bb = e.get_Geometry(options).GetBoundingBox()
+# 	trans = bb.Transform
+# 	outline = Outline(trans.OfPoint(bb.Min), trans.OfPoint(bb.Max))
+# 	bbFilter = BoundingBoxIntersectsFilter(outline)
+
+# 	cat_list = [BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctCurves,\
+# 				BuiltInCategory.OST_CableTray, BuiltInCategory.OST_FlexPipeCurves,\
+# 				BuiltInCategory.OST_PipeInsulations, BuiltInCategory.OST_DuctInsulations]
+# 	icatcollection = List[BuiltInCategory]()
+# 	for cat in cat_list:
+# 		icatcollection.Add(cat)
+# 	multiCatFilter = ElementMulticategoryFilter(icatcollection)
+
+# 	totalFilter = LogicalAndFilter(multiCatFilter, bbFilter)
+
+# 	collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
+# 					.WherePasses(totalFilter)\
+# 					.WhereElementIsNotElementType()\
+# 					.ToElements()
+
+# 	for i in collector:
+# 		if get_intersection(e, i) is not None:
+# 			ColorElement(i)
+# t.Commit()
+
+# # # # # Check BEAM
+
+
+
+
 
 
 
@@ -820,23 +919,45 @@ t.Commit()
 
 # def CheckConnection(e1, e2):
 # 	if (e1.ToString() == "Autodesk.Revit.DB.FamilyInstance") or (e2.ToString() == "Autodesk.Revit.DB.FamilyInstance"):
+# 	# 	try:
+# 	# 		connector = e1
+# 	# 		connectorList = e2.ConnectorManager.Connectors
+# 	# 	except:
+# 	# 		connector = e2
+# 	# 		connectorList = e1.ConnectorManager.Connectors
+# 	# 	print(dir(connector.MEPModel.ConnectorManager.Connectors))
+# 	# 	print(connectorList)
+# 	# 	for i in connectorList:
+# 	# 		print(i)
+# 	# 		if i.Id == connector.Id:
+# 	# 			return True
+# 	# 			break
+# 	# 	else :
+# 	# 		return False
+# 	# else:
+# 	# 	return False
 # 		try:
-# 			connector = e1
-# 			connectorList = e2.ConnectorManager.Connectors
+# 			connectorList1 = e1.MEPModel.ConnectorManager.Connectors
+# 			connectorList2 = e2.ConnectorManager.Connectors
 # 		except:
-# 			connector = e2
-# 			connectorList = e1.ConnectorManager.Connectors
-# 		print(dir(connector.MEPModel.ConnectorManager.Connectors))
-# 		print(connectorList)
-# 		for i in connectorList:
-# 			print(i)
-# 			if i.Id == connector.Id:
+# 			connectorList2 = e2.MEPModel.ConnectorManager.Connectors
+# 			connectorList1 = e1.ConnectorManager.Connectors
+# 		for c1 in connectorList1:
+# 			print(e1)
+# 			print(c1)
+# 			if c1 in connectorList2:
 # 				return True
 # 				break
-# 		else :
-# 			return False
-# 	else:
-# 		return False
+# 			else:
+# 				return False
+# 		for c2 in connectorList2:
+# 			print(e2)
+# 			print(c2)
+# 			if c2 in connectorList1:
+# 				return True
+# 				break
+# 			else:
+# 				pass
 
 # e1 = get_selected_elements(doc)[0]
 # e2 = get_selected_elements(doc)[1]

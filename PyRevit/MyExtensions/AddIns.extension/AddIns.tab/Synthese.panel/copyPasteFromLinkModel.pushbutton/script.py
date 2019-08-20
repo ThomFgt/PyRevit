@@ -105,28 +105,44 @@ if doc.ActiveView.GetType().ToString() == "Autodesk.Revit.DB.View3D":
 		outline = Outline(outmin, outmax)
 		bbFilter = BoundingBoxIntersectsFilter(outline)
 		
-
-	element_collector = FilteredElementCollector(linkdoc)\
-		.WherePasses(bbFilter)\
-		.WhereElementIsNotElementType()\
-		.ToElements()
-		
-	# element_collector = FilteredElementCollector(linkdoc)\
-		# .OfCategory(BuiltInCategory.OST_Floors)\
-		# .WherePasses(bbFilter)\
-		# .WhereElementIsNotElementType()\
-		# .ToElements()
-
-	elementId_collector = FilteredElementCollector(linkdoc)\
-		.WherePasses(bbFilter)\
-		.WhereElementIsNotElementType()\
-		.ToElementIds()
-		
-	# elementId_collector = FilteredElementCollector(linkdoc)\
-		# .OfCategory(BuiltInCategory.OST_Floors)\
-		# .WherePasses(bbFilter)\
-		# .WhereElementIsNotElementType()\
-		# .ToElementIds()
+	copy_list = ["All elements", "Ceilings", "Beams"]
+	res1 = forms.SelectFromList.show(copy_list,
+									title = "What do you want to copy?",
+									multiselect = False,
+									button_name = "OK")
+	if res1 is None:
+		sys.exit()
+	elif res1[0] == "All elements":
+		element_collector = FilteredElementCollector(linkdoc)\
+			.WherePasses(bbFilter)\
+			.WhereElementIsNotElementType()\
+			.ToElements()
+		elementId_collector = FilteredElementCollector(linkdoc)\
+			.WherePasses(bbFilter)\
+			.WhereElementIsNotElementType()\
+			.ToElementIds()
+	elif res1[0] == "Ceilings":
+		element_collector = FilteredElementCollector(linkdoc)\
+			.OfCategory(BuiltInCategory.OST_Ceilings)\
+			.WherePasses(bbFilter)\
+			.WhereElementIsNotElementType()\
+			.ToElements()
+		elementId_collector = FilteredElementCollector(linkdoc)\
+			.OfCategory(BuiltInCategory.OST_Ceilings)\
+			.WherePasses(bbFilter)\
+			.WhereElementIsNotElementType()\
+			.ToElementIds()
+	elif res1[0] == "Beams":
+		element_collector = FilteredElementCollector(linkdoc)\
+			.OfCategory(BuiltInCategory.OST_StructuralFraming)\
+			.WherePasses(bbFilter)\
+			.WhereElementIsNotElementType()\
+			.ToElements()
+		elementId_collector = FilteredElementCollector(linkdoc)\
+			.OfCategory(BuiltInCategory.OST_StructuralFraming)\
+			.WherePasses(bbFilter)\
+			.WhereElementIsNotElementType()\
+			.ToElementIds()
 
 	for e in element_collector:
 		try:
