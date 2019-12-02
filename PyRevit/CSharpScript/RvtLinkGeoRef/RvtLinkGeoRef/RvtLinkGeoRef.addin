@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Command">
+    <Name>RvtLinkGeoRef</Name>
+    <Assembly>RvtLinkGeoRef.dll</Assembly>
+    <AddInId>
+      F34FB055-4506-434D-9ABE-88DA053A60DC
+    </AddInId>
+    <FullClassName>RvtLinkGeoRef.Start.cs</FullClassName>
+    <Text>Georefrvtlink</Text>
+    <Description>géoreferencement liens revit</Description>
+    <VendorId>Jules</VendorId>
+    <VendorDescription>@Learndynamo</VendorDescription>
+    <VisibilityMode>NotVisibleWhenNoActiveDocument</VisibilityMode>
+  </AddIn>
+</RevitAddIns>

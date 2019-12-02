@@ -1,14 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <RevitAddIns>
   <AddIn Type="Command">
-    <Name>infoappart</Name>
-    <Assembly>infoappart.dll</Assembly>
+    <Name>Indicateurs</Name>
+    <Assembly>Indicateurs.dll</Assembly>
     <AddInId>
-      962E7E3F-1DC8-4D38-A7B7-21A2D9C441B0
+      DF21742C-3780-40B7-8870-C455C98343DF
     </AddInId>
-    <FullClassName>infoappart.Start</FullClassName>
-    <Text>Start</Text>
-    <Description>recupere les informations des pieces</Description>
+    <FullClassName>Indicateurs.Indicateurscommand</FullClassName>
+    <Text>Plugin Export de quantité</Text>
+    <Description>Exporte dans Excel des indicateurs de la maquette</Description>
     <VendorId>Jules</VendorId>
     <VendorDescription>@Learndynamo</VendorDescription>
     <VisibilityMode>NotVisibleWhenNoActiveDocument</VisibilityMode>
