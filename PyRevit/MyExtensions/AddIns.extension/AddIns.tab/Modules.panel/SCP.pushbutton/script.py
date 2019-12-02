@@ -367,33 +367,63 @@ if res1 != None:
 		storageType = e0.get_Parameter(chosenParam).StorageType
 	except:
 		storageType = e0.get_Parameter(chosenParam.GuidValue).StorageType
-	
+		
 	if res3 != None:
+		if str(storageType) == "Double":
+			ops = ['>=', '=', '<=']
+			res4 = forms.CommandSwitchWindow.show(ops, message='Select the filter rule')
+		else:
+			ops = ['Equals', 'Contains']
+			res4 = forms.CommandSwitchWindow.show(ops, message='Select the filter rule')
+		
 		value = TextInput('Value', default="Parameter value")
 		
-		if str(storageType) == "Integer":
-			evaluator = FilterStringEquals()
-			ruleValue = value
-			rule = FilterStringRule(provider, evaluator, ruleValue, False)
-			elementParamFilter = ElementParameterFilter(rule)
-		elif str(storageType) == "String":
-			evaluator = FilterStringEquals()
-			ruleValue = value
-			rule = FilterStringRule(provider, evaluator, ruleValue, False)
-			elementParamFilter = ElementParameterFilter(rule)
-		elif str(storageType) == "ElementId":
-			evaluator = FilterStringEquals()
-			ruleValue = value
-			rule = FilterStringRule(provider, evaluator, ruleValue, False)
-			elementParamFilter = ElementParameterFilter(rule)
+		if (str(storageType) == "Integer") or (str(storageType) == "String") or (str(storageType) == "ElementId"):
+			if res4 == "Equals":
+				evaluator = FilterStringEquals()
+				ruleValue = value
+				rule = FilterStringRule(provider, evaluator, ruleValue, False)
+				elementParamFilter = ElementParameterFilter(rule)
+			elif res4 == "Contains":
+				evaluator = FilterStringContains()
+				ruleValue = value
+				rule = FilterStringRule(provider, evaluator, ruleValue, False)
+				elementParamFilter = ElementParameterFilter(rule)
+		# elif str(storageType) == "String":
+			# evaluator = FilterStringEquals()
+			# ruleValue = value
+			# rule = FilterStringRule(provider, evaluator, ruleValue, False)
+			# elementParamFilter = ElementParameterFilter(rule)
+		# elif str(storageType) == "ElementId":
+			# evaluator = FilterStringEquals()
+			# ruleValue = value
+			# rule = FilterStringRule(provider, evaluator, ruleValue, False)
+			# elementParamFilter = ElementParameterFilter(rule)
 		elif str(storageType) == "Double":
-			evaluator = FilterNumericEquals()
-			d = str(value)[:-1].find(".")
-			# ruleValue = round(UnitUtils.ConvertFromInternalUnits(float(value), DisplayUnitType.DUT_METERS), d)
-			# ruleValue = round(float(value), d)
-			ruleValue = round(UnitUtils.ConvertToInternalUnits(float(value), DisplayUnitType.DUT_METERS), d)
-			rule = FilterDoubleRule(provider, evaluator, ruleValue, 10**(-d))
-			elementParamFilter = ElementParameterFilter(rule)
+			if res4 == "=":
+				evaluator = FilterNumericEquals()
+				d = str(value)[:-1].find(".")
+				# ruleValue = round(UnitUtils.ConvertFromInternalUnits(float(value), DisplayUnitType.DUT_METERS), d)
+				# ruleValue = round(float(value), d)
+				ruleValue = round(UnitUtils.ConvertToInternalUnits(float(value), DisplayUnitType.DUT_METERS), d)
+				rule = FilterDoubleRule(provider, evaluator, ruleValue, 10**(-d))
+				elementParamFilter = ElementParameterFilter(rule)
+			elif res4 == ">=":
+				evaluator = FilterNumericGreaterOrEqual()
+				d = str(value)[:-1].find(".")
+				# ruleValue = round(UnitUtils.ConvertFromInternalUnits(float(value), DisplayUnitType.DUT_METERS), d)
+				# ruleValue = round(float(value), d)
+				ruleValue = round(UnitUtils.ConvertToInternalUnits(float(value), DisplayUnitType.DUT_METERS), d)
+				rule = FilterDoubleRule(provider, evaluator, ruleValue, 10**(-d))
+				elementParamFilter = ElementParameterFilter(rule)
+			elif res4 == "<=":
+				evaluator = FilterNumericLessOrEqual()
+				d = str(value)[:-1].find(".")
+				# ruleValue = round(UnitUtils.ConvertFromInternalUnits(float(value), DisplayUnitType.DUT_METERS), d)
+				# ruleValue = round(float(value), d)
+				ruleValue = round(UnitUtils.ConvertToInternalUnits(float(value), DisplayUnitType.DUT_METERS), d)
+				rule = FilterDoubleRule(provider, evaluator, ruleValue, 10**(-d))
+				elementParamFilter = ElementParameterFilter(rule)
 			
 			
 		element_collector = collector\

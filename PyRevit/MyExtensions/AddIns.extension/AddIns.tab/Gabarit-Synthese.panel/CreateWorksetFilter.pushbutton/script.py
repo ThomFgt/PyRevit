@@ -43,7 +43,7 @@ Cat = [
 			DB.BuiltInCategory.OST_IsolatedFoundationAnalytical,
 			DB.BuiltInCategory.OST_LinksAnalytical ,
 			DB.BuiltInCategory.OST_AnalyticalNodes ,
-			DB.BuiltInCategory.OST_AnalyticalPipeConnections ,
+			# DB.BuiltInCategory.OST_AnalyticalPipeConnections ,
 			DB.BuiltInCategory.OST_AnalyticSpaces ,
 			DB.BuiltInCategory.OST_AnalyticSurfaces ,
 			DB.BuiltInCategory.OST_WallFoundationAnalytical ,

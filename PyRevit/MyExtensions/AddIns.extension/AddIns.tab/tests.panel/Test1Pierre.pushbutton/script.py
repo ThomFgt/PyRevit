@@ -154,154 +154,6 @@
 
 
 
-# import clr
-# import math
-# clr.AddReference('RevitAPI') 
-# clr.AddReference('RevitAPIUI') 
-# from Autodesk.Revit.DB import *
-# from Autodesk.Revit.UI import *
-# from System.Collections.Generic import List
-# from pyrevit import forms
-# from rpw.ui.forms import TextInput
-
-# doc = __revit__.ActiveUIDocument.Document
-# uidoc = __revit__.ActiveUIDocument
-# options = __revit__.Application.Create.NewGeometryOptions()
-
-# def get_selected_elements(doc):
-#     try:
-#         # # Revit 2016
-#         return [doc.GetElement(id)
-#                 for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
-#     except:
-#         # # old method
-#         return list(__revit__.ActiveUIDocument.Selection.Elements)
-
-# def DocToOriginTransform(doc):
-# 	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
-# 	translationVector = XYZ(projectPosition.EastWest, projectPosition.NorthSouth, projectPosition.Elevation)
-# 	translationTransform = Transform.CreateTranslation(translationVector)
-# 	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition.Angle, XYZ.Zero)
-# 	finalTransform = translationTransform.Multiply(rotationTransform)
-# 	return finalTransform
-
-# def OriginToDocTransform(doc):
-# 	projectPosition = doc.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
-# 	translationVector = XYZ(-projectPosition.EastWest, -projectPosition.NorthSouth, -projectPosition.Elevation)
-# 	translationTransform = Transform.CreateTranslation(translationVector)
-# 	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, -projectPosition.Angle, XYZ.Zero)
-# 	finalTransform = rotationTransform.Multiply(translationTransform)
-# 	return finalTransform
-
-# def DocToDocTransform(doc1, doc2):
-# 	projectPosition1 = doc1.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
-# 	projectPosition2 = doc2.ActiveProjectLocation.get_ProjectPosition(XYZ.Zero)
-# 	translationVector = XYZ(projectPosition1.EastWest-projectPosition2.EastWest, \
-# 		projectPosition1.NorthSouth-projectPosition2.NorthSouth, \
-# 		projectPosition1.Elevation-projectPosition2.Elevation)
-# 	translationTransform = Transform.CreateTranslation(translationVector)
-# 	rotationTransform = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPosition1.Angle-projectPosition2.Angle, XYZ.Zero)
-# 	finalTransform = translationTransform.Multiply(rotationTransform)
-# 	return finalTransform
-
-# def get_solid(element):
-# 	solid_list = []
-# 	for i in element.get_Geometry(options):
-# 		if i.ToString() == "Autodesk.Revit.DB.Solid":
-# 			solid_list.append(SolidUtils.CreateTransformed(i, DocToDocTransform(element.Document, __revit__.ActiveUIDocument.Document)))
-# 		elif i.ToString() == "Autodesk.Revit.DB.GeometryInstance":
-# 			for j in i.GetInstanceGeometry():
-# 				if j.ToString() == "Autodesk.Revit.DB.Solid":
-# 					solid_list.append(SolidUtils.CreateTransformed(j, DocToDocTransform(element.Document, __revit__.ActiveUIDocument.Document)))
-# 	return solid_list
-
-
-# def get_docsolid(element, elementdoc, activedoc):
-# 	docToOriginTrans = DocToOriginTransform(elementdoc)
-# 	originToDocTrans = OriginToDocTransform(activedoc)
-
-# 	bb = element.get_Geometry(options).GetBoundingBox()
-# 	trans = bb.Transform
-# 	bbmin = originToDocTrans.OfPoint(docToOriginTrans.OfPoint(trans.OfPoint(bb.Min)))
-# 	bbmax = originToDocTrans.OfPoint(docToOriginTrans.OfPoint(trans.OfPoint(bb.Max)))
-
-# 	pt0 = XYZ(bbmin.X, bbmin.Y, bbmin.Z)
-# 	pt1 = XYZ(bbmax.X, bbmin.Y, bbmin.Z)
-# 	pt2 = XYZ(bbmax.X, bbmax.Y, bbmin.Z)
-# 	pt3 = XYZ(bbmin.X, bbmax.Y, bbmin.Z)
-
-# 	edge0 = Line.CreateBound(pt0, pt1)
-# 	edge1 = Line.CreateBound(pt1, pt2)
-# 	edge2 = Line.CreateBound(pt2, pt3)
-# 	edge3 = Line.CreateBound(pt3, pt0)
-
-# 	iCurveCollection = List[Curve]()
-# 	iCurveCollection.Add(edge0)
-# 	iCurveCollection.Add(edge1)
-# 	iCurveCollection.Add(edge2)
-# 	iCurveCollection.Add(edge3)
-# 	height = bbmax.Z - bbmin.Z
-# 	baseLoop = CurveLoop.Create(iCurveCollection)
-
-# 	iCurveLoopCollection = List[CurveLoop]()
-# 	iCurveLoopCollection.Add(baseLoop)
-
-# 	solid = GeometryCreationUtilities.CreateExtrusionGeometry(iCurveLoopCollection, XYZ.BasisZ, height)
-	
-# 	return solid
-
-# def get_intersection(el1, el2):
-# 	bb1 = el1.get_Geometry(options).GetBoundingBox()
-# 	bb2 = el2.get_Geometry(options).GetBoundingBox()
-
-# 	trans1 = bb1.Transform
-# 	trans2 = bb2.Transform
-
-# 	min1 = trans1.OfPoint(bb1.Min)
-# 	max1 = trans1.OfPoint(bb1.Max)
-# 	min2 = trans2.OfPoint(bb2.Min)
-# 	max2 = trans2.OfPoint(bb2.Max)
-
-# 	outline1 = Outline(min1, max1)
-# 	outline2 = Outline(min2, max2)
-
-# 	solid1_list = get_solid(el1)
-# 	solid2_list = get_solid(el2)
-
-# 	for i in solid1_list:
-# 		for j in solid2_list:
-# 			try:
-# 				inter = BooleanOperationsUtils.ExecuteBooleanOperation(i, j, BooleanOperationsType.Intersect)
-# 				if inter.Volume != 0:
-# 					interBb = inter.GetBoundingBox()
-# 					interTrans = interBb.Transform
-# 					interPoint = interTrans.OfPoint(interBb.Min)
-# 					break
-# 			except:
-# 				"Oh god!"
-
-# 	try:
-# 		interPoint
-# 		return interPoint
-# 	except:
-# 		return None
-
-# el = get_selected_elements(doc)[0]
-# print(el.Id)
-
-# bubbleBb = el.get_Geometry(options).GetBoundingBox()
-# bubbleTrans = bubbleBb.Transform
-# bubbleOutline = Outline(bubbleTrans.OfPoint(bubbleBb.Min), bubbleTrans.OfPoint(bubbleBb.Max))
-# bbFilter = BoundingBoxIntersectsFilter(bubbleOutline)
-# gm_collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
-# 		.OfCategory(BuiltInCategory.OST_GenericModel)\
-# 		.WherePasses(bbFilter)\
-# 		.WhereElementIsNotElementType()\
-# 		.ToElements()
-
-# for i in gm_collector:
-# 	print(i)
-# 	print(i.Id)
 
 
 
@@ -310,6 +162,7 @@
 
 
 # # # # # ATTENTION MODULE FORM DANS REVIT
+import sys
 import clr
 import System
 clr.AddReference('RevitAPI') 
@@ -323,12 +176,345 @@ from Autodesk.Revit.UI import *
 from Autodesk.Revit.DB import *
 from System.Windows.Forms import *
 from System.Collections.Generic import List
+from pyrevit import forms
+from rpw.ui.forms import TextInput
+from pyrevit import framework
+from pyrevit.framework import Interop
+from pyrevit.api import AdWindows
+from pyrevit.framework import wpf, Forms, Controls, Media
 
 doc = __revit__.ActiveUIDocument.Document
 uidoc = __revit__.ActiveUIDocument
 options = __revit__.Application.Create.NewGeometryOptions()
 # app = __revit__.Application
 app = uidoc.Application.Application
+
+
+
+# # # # # FORM CHELOU
+# class WPFWindow(framework.Windows.Window):
+#     def __init__(self, xaml_source, literal_string=False):
+#         # self.Parent = self
+#         wih = Interop.WindowInteropHelper(self)
+#         wih.Owner = AdWindows.ComponentManager.ApplicationWindow
+
+#         if not literal_string:
+#             if not op.exists(xaml_source):
+#                 wpf.LoadComponent(self,
+#                                   os.path.join(EXEC_PARAMS.command_path,
+#                                                xaml_source)
+#                                   )
+#             else:
+#                 wpf.LoadComponent(self, xaml_source)
+#         else:
+#             wpf.LoadComponent(self, framework.StringReader(xaml_source))
+
+#         #2c3e50
+#         self.Resources['pyRevitDarkColor'] = \
+#             Media.Color.FromArgb(0xFF, 0x2c, 0x3e, 0x50)
+
+#         #23303d
+#         self.Resources['pyRevitDarkerDarkColor'] = \
+#             Media.Color.FromArgb(0xFF, 0x23, 0x30, 0x3d)
+
+#         #ffffff
+#         self.Resources['pyRevitButtonColor'] = \
+#             Media.Color.FromArgb(0xFF, 0xff, 0xff, 0xff)
+
+#         #f39c12
+#         self.Resources['pyRevitAccentColor'] = \
+#             Media.Color.FromArgb(0xFF, 0xf3, 0x9c, 0x12)
+
+#         self.Resources['pyRevitDarkBrush'] = \
+#             Media.SolidColorBrush(self.Resources['pyRevitDarkColor'])
+#         self.Resources['pyRevitAccentBrush'] = \
+#             Media.SolidColorBrush(self.Resources['pyRevitAccentColor'])
+
+#         self.Resources['pyRevitDarkerDarkBrush'] = \
+#             Media.SolidColorBrush(self.Resources['pyRevitDarkerDarkColor'])
+
+#         self.Resources['pyRevitButtonForgroundBrush'] = \
+#             Media.SolidColorBrush(self.Resources['pyRevitButtonColor'])
+
+#     def show(self, modal=False):
+#         if modal:
+#             return self.ShowDialog()
+#         self.Show()
+
+#     def show_dialog(self):
+#         return self.ShowDialog()
+
+#     def set_image_source(self, element_name, image_file):
+#         wpfel = getattr(self, element_name)
+#         if not op.exists(image_file):
+#             # noinspection PyUnresolvedReferences
+#             wpfel.Source = \
+#                 framework.Imaging.BitmapImage(
+#                     framework.Uri(os.path.join(EXEC_PARAMS.command_path,
+#                                                image_file))
+#                     )
+#         else:
+#             wpfel.Source = \
+#                 framework.Imaging.BitmapImage(framework.Uri(image_file))
+
+#     @staticmethod
+#     def hide_element(*wpf_elements):
+#         for wpfel in wpf_elements:
+#             wpfel.Visibility = framework.Windows.Visibility.Collapsed
+
+#     @staticmethod
+#     def show_element(*wpf_elements):
+#         for wpfel in wpf_elements:
+#             wpfel.Visibility = framework.Windows.Visibility.Visible
+
+#     @staticmethod
+#     def toggle_element(*wpf_elements):
+#         for wpfel in wpf_elements:
+#             if wpfel.Visibility == framework.Windows.Visibility.Visible:
+#                 self.hide_element(wpfel)
+#             elif wpfel.Visibility == framework.Windows.Visibility.Collapsed:
+#                 self.show_element(wpfel)
+
+# class TemplateUserInputWindow(WPFWindow):
+#     layout = """
+#     <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+#             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+#             ShowInTaskbar="False" ResizeMode="NoResize"
+#             WindowStartupLocation="CenterScreen"
+#             HorizontalContentAlignment="Center">
+#     </Window>
+#     """
+#     def __init__(self, context, title, width, height, **kwargs):
+#         WPFWindow.__init__(self, self.layout, literal_string=True)
+#         self.Title = title
+#         self.Width = width
+#         self.Height = height
+
+#         self._context = context
+#         self.response = None
+#         self.PreviewKeyDown += self.handle_input_key
+
+#         self._setup(**kwargs)
+
+#     def _setup(self, **kwargs):
+#         pass
+
+#     def handle_input_key(self, sender, args):
+#         if args.Key == framework.Windows.Input.Key.Escape:
+#             self.Close()
+
+#     @classmethod
+#     def show(cls, context,
+#              title='User Input', width=300, height=400, **kwargs):
+#         dlg = cls(context, title, width, height, **kwargs)
+#         dlg.ShowDialog()
+#         return dlg.response
+
+# class SelectFromCheckBoxes(TemplateUserInputWindow):
+#     layout = """
+#     <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+#             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+#             ShowInTaskbar="False" ResizeMode="CanResize"
+#             WindowStartupLocation="CenterScreen"
+#             HorizontalContentAlignment="Center">
+#             <Window.Resources>
+#                 <Style x:Key="ClearButton" TargetType="Button">
+#                     <Setter Property="Background" Value="White"/>
+#                 </Style>
+#             </Window.Resources>
+#             <DockPanel Margin="10">
+#                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+#                     <TextBlock FontSize="14" Margin="0,3,10,0" \
+#                                DockPanel.Dock="Left">Filter:</TextBlock>
+#                     <StackPanel>
+#                         <TextBox x:Name="search_tb" Height="25px"
+#                                  TextChanged="search_txt_changed"/>
+#                         <Button Style="{StaticResource ClearButton}"
+#                                 HorizontalAlignment="Right"
+#                                 x:Name="clrsearch_b" Content="x"
+#                                 Margin="0,-25,5,0" Padding="0,-4,0,0"
+#                                 Click="clear_search"
+#                                 Width="15px" Height="15px"/>
+#                     </StackPanel>
+#                 </DockPanel>
+#                 <StackPanel DockPanel.Dock="Bottom">
+#                     <Grid>
+#                         <Grid.RowDefinitions>
+#                             <RowDefinition Height="Auto" />
+#                         </Grid.RowDefinitions>
+#                         <Grid.ColumnDefinitions>
+#                             <ColumnDefinition Width="*" />
+#                             <ColumnDefinition Width="*" />
+#                             <ColumnDefinition Width="*" />
+#                         </Grid.ColumnDefinitions>
+#                         <Button x:Name="checkall_b"
+#                                 Grid.Column="0" Grid.Row="0"
+#                                 Content="Check" Click="check_all"
+#                                 Margin="0,10,3,0"/>
+#                         <Button x:Name="uncheckall_b"
+#                                 Grid.Column="1" Grid.Row="0"
+#                                 Content="Uncheck" Click="uncheck_all"
+#                                 Margin="3,10,3,0"/>
+#                         <Button x:Name="toggleall_b"
+#                                 Grid.Column="2" Grid.Row="0"
+#                                 Content="Toggle" Click="toggle_all"
+#                                 Margin="3,10,0,0"/>
+#                     </Grid>
+#                     <Button x:Name="select_b" Content=""
+#                             Click="button_select" Margin="0,10,0,0"/>
+#                 </StackPanel>
+#                 <ListView x:Name="list_lb">
+#                     <ListView.ItemTemplate>
+#                          <DataTemplate>
+#                            <StackPanel>
+#                              <CheckBox Content="{Binding name}"
+#                                        IsChecked="{Binding state}"/>
+#                            </StackPanel>
+#                          </DataTemplate>
+#                    </ListView.ItemTemplate>
+#                 </ListView>
+#             </DockPanel>
+#     </Window>
+#     """
+#     def _setup(self, **kwargs):
+#         self.hide_element(self.clrsearch_b)
+#         self.clear_search(None, None)
+#         self.search_tb.Focus()
+
+#         button_name = kwargs.get('button_name', None)
+#         if button_name:
+#             self.select_b.Content = button_name
+
+#         self._list_options()
+
+#     def _list_options(self, checkbox_filter=None):
+#         if checkbox_filter:
+#             self.checkall_b.Content = 'Check'
+#             self.uncheckall_b.Content = 'Uncheck'
+#             self.toggleall_b.Content = 'Toggle'
+#             checkbox_filter = checkbox_filter.lower()
+#             self.list_lb.ItemsSource = \
+#                 [checkbox for checkbox in self._context
+#                  if checkbox_filter in checkbox.name.lower()]
+#         else:
+#             self.checkall_b.Content = 'Check All'
+#             self.uncheckall_b.Content = 'Uncheck All'
+#             self.toggleall_b.Content = 'Toggle All'
+#             self.list_lb.ItemsSource = self._context
+
+#     def _set_states(self, state=True, flip=False):
+#         current_list = self.list_lb.ItemsSource
+#         for checkbox in current_list:
+#             if flip:
+#                 checkbox.state = not checkbox.state
+#             else:
+#                 checkbox.state = state
+
+#         # push list view to redraw
+#         self.list_lb.ItemsSource = None
+#         self.list_lb.ItemsSource = current_list
+
+#     def toggle_all(self, sender, args):
+#         self._set_states(flip=True)
+
+#     def check_all(self, sender, args):
+#         self._set_states(state=True)
+
+#     def uncheck_all(self, sender, args):
+#         self._set_states(state=False)
+
+#     def button_select(self, sender, args):
+#         self.response = self._context
+#         self.Close()
+
+#     def search_txt_changed(self, sender, args):
+#         if self.search_tb.Text == '':
+#             self.hide_element(self.clrsearch_b)
+#         else:
+#             self.show_element(self.clrsearch_b)
+
+#         self._list_options(checkbox_filter=self.search_tb.Text)
+
+#     def clear_search(self, sender, args):
+#         self.search_tb.Text = ' '
+#         self.search_tb.Clear()
+#         self.list_lb.ItemsSource = self._context
+
+# class CheckBoxOption:
+# 	def __init__(self, name, default_state=False):
+# 		self.name = name
+# 		self.state = default_state
+
+# 	def __nonzero__(self):
+# 		return self.state
+
+# 	def __bool__(self):
+# 		return self.state
+
+# value = TextInput('Value', default="Parameter value")
+# ops = ['option1', 'option2', 'option3', 'option4']
+# res4 = forms.CommandSwitchWindow.show(ops, message='Select Option')
+# print(res4)
+# # # # # FORM CHELOU
+
+
+
+
+
+
+# # # # # TURN OFF A WORKSET IN ALL VIEWS
+# from Autodesk.Revit.DB import *
+
+# activeWorksetId = doc.GetWorksetTable().GetActiveWorksetId()
+# print(doc.ActiveView.GetWorksetVisibility(activeWorksetId))
+
+# view_collector = FilteredElementCollector(doc).OfClass(View)
+
+# t = Transaction(doc, 'Change workset visibility in all views')
+# t.Start()
+# for v in view_collector:
+# 	if (v.ViewType == ViewType.ThreeD) or (v.ViewType == ViewType.Section) or (v.ViewType == ViewType.FloorPlan) or (v.ViewType == ViewType.CeilingPlan):
+# 		print(v.Name)
+# 		v.SetWorksetVisibility(activeWorksetId, WorksetVisibility.UseGlobalSetting)
+# t.Commit()
+# # # # # TURN OFF A WORKSET IN ALL VIEWS
+
+
+
+
+
+
+
+
+# # # # # CHANGE IN-PLACE FAMILY CATEGORY
+# def get_selected_elements(doc):
+#     try:
+#         # # Revit 2016
+#         return [doc.GetElement(id)
+#                 for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
+#     except:
+#         # # old method
+#         return list(__revit__.ActiveUIDocument.Selection.Elements)
+
+# e = get_selected_elements(doc)[0]
+# print(e)
+# print(e.Symbol.Family.IsInPlace)
+# family = e.Symbol.Family
+# familyCat = family.FamilyCategory
+# print(familyCat.Name)
+# bic = BuiltInCategory.OST_Ceilings
+# cat = Category.GetCategory(doc, bic)
+# print(cat.Name)
+# famDoc = doc.EditFamily(family)
+# # family.FamilyCategory = cat
+# # # # # CHANGE IN-PLACE FAMILY CATEGORY
+
+
+
+
+
+
+
 
 # # if doc.ActiveView.GetType().ToString() == "Autodesk.Revit.DB.ViewSheet":
 # # 	viewId_list = doc.ActiveView.GetAllPlacedViews()
@@ -416,24 +602,6 @@ app = uidoc.Application.Application
 
 
 
-
-
-
-# # # # # USE REVIT FORMS
-# a = TextBox
-# a.Name = "TB"
-# a.Visible = True
-# a.Enabled = True
-# # # # # USE REVIT FORMS
-
-
-
-
-
-
-
-
-
 # def get_selected_elements(doc):
 #     try:
 #         # # Revit 2016
@@ -444,11 +612,6 @@ app = uidoc.Application.Application
 #         return list(__revit__.ActiveUIDocument.Selection.Elements)
 
 # e = get_selected_elements(doc)
-# for i in e:
-# 	print(i.LookupParameter("Ai NVP").AsDouble())
-
-
-
 
 # insulationId = InsulationLiningBase.GetInsulationIds(doc, e.Id)[0]
 # e1 = doc.GetElement(insulationId)
@@ -476,18 +639,31 @@ app = uidoc.Application.Application
 
 
 
+# # # # # Read Ai NGF RESA
+# collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
+# 				.OfCategory(BuiltInCategory.OST_GenericModel)\
+# 				.WhereElementIsNotElementType()\
+# 				.ToElements()
+
+# for e in collector:
+# 	familyName = e.Symbol.FamilyName
+# 	if "BPS_RESA" in familyName:
+# 		bb = e.get_Geometry(options).GetBoundingBox()
+# 		trans = bb.Transform
+# 		zMin = trans.OfPoint(bb.Min).Z
+# 		number = e.LookupParameter("BPS_Repere")
+# 		lot = e.LookupParameter("BPS_Lot")
+# 		PH = e.LookupParameter("BPS_En_Plancher")
+# 		print(number.AsString() + str(",") + lot.AsString() + str(",") + str(PH.AsValueString()))
+# # # # # Read Ai NGF RESA
 
 
 
-# collector = FilteredElementCollector(doc).OfClass(ParameterValue)
-# for i in collector:
-# 	print(i)
-# 	print(i.GetType())
-# 	print(i.ToString())
-# 	break
 
 
-# # # # # NUMEROTE BULLES
+
+
+
 # def get_selected_elements(doc):
 #     try:
 #         # # Revit 2016
@@ -499,42 +675,26 @@ app = uidoc.Application.Application
 
 
 # e = get_selected_elements(doc)[0]
-# level = e.LookupParameter("Niveau").AsValueString()
-# name = e.Name
+# print(e.Host)
+# print(e.HostFace)
 
-# collector = FilteredElementCollector(doc)\
-# 				.OfCategory(BuiltInCategory.OST_GenericModel)\
+# collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
 # 				.WhereElementIsNotElementType()\
 # 				.ToElements()
 
-# num_list = []
-# j = 0
-# for i in collector:
-# 	level_i = i.LookupParameter("Niveau").AsValueString()
-# 	name_i = i.Name
-# 	if (level_i == level) and (name_i == name):
-# 		j = j + 1
-# 		num_i = i.LookupParameter("BPS - Num"+str("\xe9")+"ro").AsString()
-# 		num_list.append(int(num_i))
-# 		if num_i != str(j):
-# 			print(j)
-# 			t = Transaction(doc, 'Number bubble')
-# 			t.Start()
-# 			# i.LookupParameter("BPS - Num"+str("\xe9")+"ro").Set(str(j))
-# 			e.LookupParameter("BPS - Num"+str("\xe9")+"ro").Set(str(j))
-# 			t.Commit()
-# 			break
-
-# print(num_list)
-# num_sorted_list = sorted(num_list)
-# print(num_sorted_list)
-# # # # # NUMEROTE BULLES
+# for e in collector:
+# 	print(e.IsMonitoringLinkElement())
+# 	print(e.IsMonitoringLocalElement())
+# 	if e.IsMonitoringLinkElement() is True:
+# 		print(e.Id)
+# 		print("Link")
+# 	if e.IsMonitoringLocalElement() is True:
+# 		print(e.Id)
+# 		print("Local")
 
 
 
 
-
-# # # # # ZOOM SUR ELEMENT SELECTIONNE
 def get_selected_elements(doc):
     try:
         # # Revit 2016
@@ -545,358 +705,141 @@ def get_selected_elements(doc):
         return list(__revit__.ActiveUIDocument.Selection.Elements)
 
 
-e = get_selected_elements(doc)[0]
+def get_solid(element):
+	solid_list = []
+	for i in element.get_Geometry(options):
+		if i.ToString() == "Autodesk.Revit.DB.Solid":
+			solid_list.append(i)
+		elif i.ToString() == "Autodesk.Revit.DB.GeometryInstance":
+			for j in i.GetInstanceGeometry():
+				if j.ToString() == "Autodesk.Revit.DB.Solid":
+					solid_list.append(j)
+	return solid_list
 
+def get_intersection(el1, el2):
+	bb1 = el1.get_Geometry(options).GetBoundingBox()
+	bb2 = el2.get_Geometry(options).GetBoundingBox()
+
+	trans1 = bb1.Transform
+	trans2 = bb2.Transform
+
+	min1 = trans1.OfPoint(bb1.Min)
+	max1 = trans1.OfPoint(bb1.Max)
+	min2 = trans2.OfPoint(bb2.Min)
+	max2 = trans2.OfPoint(bb2.Max)
+
+	outline1 = Outline(min1, max1)
+	outline2 = Outline(min2, max2)
+
+	solid1_list = get_solid(el1)
+	solid2_list = get_solid(el2)
+
+	for i in solid1_list:
+		for j in solid2_list:
+			try:
+				inter = BooleanOperationsUtils.ExecuteBooleanOperation(i, j, BooleanOperationsType.Intersect)
+				if inter.Volume != 0:
+					interBb = inter.GetBoundingBox()
+					interTrans = interBb.Transform
+					interPoint = interTrans.OfPoint(interBb.Min)
+					break
+			except:
+				"Oh god!"
+
+	try:
+		interPoint
+		return interPoint
+	except:
+		return None
+
+
+e1 = get_selected_elements(doc)[0]
+print(get_solid(e1)[0].Volume)
+e2 = get_selected_elements(doc)[1]
+
+print(get_intersection(e1, e2))
+
+# # # # # NOMME LES COUPES
+# def get_selected_elements(doc):
+#     try:
+#         # # Revit 2016
+#         return [doc.GetElement(id)
+#                 for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
+#     except:
+#         # # old method
+#         return list(__revit__.ActiveUIDocument.Selection.Elements)
+
+
+# e = get_selected_elements(doc)[0]
+# cat = e.Category.Name
+# Name = e.Name
+
+# if ("_" not in Name) and (cat != "Vues"):
+# 	print("Please select a presentation view section")
+# 	sys.exit()
+
+# viewType = e.ViewType.ToString()
+# namePrefixe = Name.split("_")[0] + "_"
+
+# collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
+# 				.OfCategory(BuiltInCategory.OST_Viewers)\
+# 				.WhereElementIsNotElementType()\
+# 				.ToElements()
+
+# if viewType == "Section":
+# 	for i in collector:
+# 		print(i.Name)
+# else:
+# 	print("Please select a presentation view section")
+
+# # num_list = []
+# # j = 0
+# # t = Transaction(doc, 'Number bubbles')
+# # t.Start()
+# # for i in collector:
+# # 	level_i = i.LookupParameter("Niveau").AsValueString()
+# # 	bType_i = i.LookupParameter("BPS - Emetteur").AsString()
+# # 	name_i = i.Name
+
+# # 	if (level_i == level) and (name_i == name) and (bType_i == bType):
+# # 		j = j + 1
+# # 		num_i = i.LookupParameter("BPS - Num"+str("\xe9")+"ro")
+# # 		num_i.Set("Rq " + str(j))
+# # t.Commit()
+# # print(j)
+
+# # # # # NOMME LES COUPES
+
+
+
+
+
+
+
+
+
+
+# # # # # ZOOM SUR ELEMENT SELECTIONNE
+# def get_selected_elements(doc):
+#     try:
+#         # # Revit 2016
+#         return [doc.GetElement(id)
+#                 for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
+#     except:
+#         # # old method
+#         return list(__revit__.ActiveUIDocument.Selection.Elements)
+
+# e = get_selected_elements(doc)[0]
 # # # # # ZOOM SUR ELEMENT SELECTIONNE
 
 
 
 
 
-# # # # # COLORISE UN RESEAU SOUS UNE CERTAINE AI
-# def get_selected_elements(doc):
-#     try:
-#         # # Revit 2016
-#         return [doc.GetElement(id)
-#                 for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
-#     except:
-#         # # old method
-#         return list(__revit__.ActiveUIDocument.Selection.Elements)
 
-# def ColorElement(e):
-# 	bb = e.get_Geometry(options).GetBoundingBox()
-# 	trans = bb.Transform
-# 	minPoint = trans.OfPoint(bb.Min)
-# 	zMin = minPoint.Z
 
-# 	i = 0
-# 	for el in elevation_list:
-# 		i = i + 1
-# 		if zMin >= el:
-# 			pass
-# 		else:
-# 			Ai = zMin - elevation_list[i-2]
-# 			break
 
-# 	try:
-# 		Aim = str(round(UnitUtils.ConvertFromInternalUnits(Ai, DisplayUnitType.DUT_METERS),3))
 
-# 		if float(Aim) < 2.05:
-# 			ogs = OverrideGraphicSettings()
-# 			color = Color(255, 0, 0)
-# 			ogs.SetProjectionFillColor(color)
-# 			ogs.SetCutFillColor(color)
-# 			fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "Uni")
-# 			ogs.SetProjectionFillPatternId(fillPatternElement.Id)
-# 			ogs.SetCutFillPatternId(fillPatternElement.Id)
-# 			ogs.SetSurfaceTransparency(50)
-# 			ogs.SetProjectionFillPatternVisible(True)
-# 			ogs.SetCutFillPatternVisible(True)
-# 			# t = Transaction(doc, 'Color element')
-# 			# t.Start()
-# 			doc.ActiveView.SetElementOverrides(e.Id, ogs)
-# 			# t.Commit()
-# 		else:
-# 			"Ok"
-# 	except:
-# 		print(e)
-# 		print("Didn't end well")
-
-# # e = get_selected_elements(doc)[0]
-
-# level_collector = FilteredElementCollector(doc)\
-# 				.OfCategory(BuiltInCategory.OST_Levels)\
-# 				.WhereElementIsNotElementType()\
-# 				.ToElements()
-
-# level_list = {}
-# for l in level_collector:
-# 	level_list[l.Name] = l.Elevation
-
-# elevation_list = sorted(level_list.values())
-
-
-# icatcollection = List[BuiltInCategory]()
-# icatcollection.Add(BuiltInCategory.OST_PipeCurves)
-# icatcollection.Add(BuiltInCategory.OST_DuctCurves)
-# icatcollection.Add(BuiltInCategory.OST_CableTray)
-# icatcollection.Add(BuiltInCategory.OST_PipeInsulations)
-# icatcollection.Add(BuiltInCategory.OST_DuctInsulations)
-
-# multiCatFilter = ElementMulticategoryFilter(icatcollection)
-
-# collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
-# 				.WherePasses(multiCatFilter)\
-# 				.WhereElementIsNotElementType()\
-# 				.ToElements()
-
-# t = Transaction(doc, 'Color elements')
-# t.Start()
-# for e in collector:
-# 	ColorElement(e)
-# t.Commit()
-# # # # # COLORISE UN RESEAU SOUS UNE CERTAINE AI
-
-
-
-
-
-
-
-
-# import_collector = FilteredElementCollector(doc)\
-# 	  .OfClass(ImportInstance)\
-# 	  .WhereElementIsNotElementType()\
-
-# for i in import_collector:
-# 	print(i.Category.Name)
-# 	view = doc.GetElement(i.OwnerViewId).Name
-# 	print(view)
-# 	print("----------")
-
-
-
-
-# # # # # Check RSO
-
-# def get_solid(element):
-# 	solid_list = []
-# 	for i in element.get_Geometry(options):
-# 		if i.ToString() == "Autodesk.Revit.DB.Solid":
-# 			solid_list.append(i)
-# 		elif i.ToString() == "Autodesk.Revit.DB.GeometryInstance":
-# 			for j in i.GetInstanceGeometry():
-# 				if j.ToString() == "Autodesk.Revit.DB.Solid":
-# 					solid_list.append(j)
-# 	return solid_list
-
-# def get_intersection(el1, el2):
-# 	bb1 = el1.get_Geometry(options).GetBoundingBox()
-# 	bb2 = el2.get_Geometry(options).GetBoundingBox()
-
-# 	trans1 = bb1.Transform
-# 	trans2 = bb2.Transform
-
-# 	min1 = trans1.OfPoint(bb1.Min)
-# 	max1 = trans1.OfPoint(bb1.Max)
-# 	min2 = trans2.OfPoint(bb2.Min)
-# 	max2 = trans2.OfPoint(bb2.Max)
-
-# 	outline1 = Outline(min1, max1)
-# 	outline2 = Outline(min2, max2)
-
-# 	solid1_list = get_solid(el1)
-# 	solid2_list = get_solid(el2)
-
-# 	for i in solid1_list:
-# 		for j in solid2_list:
-# 			try:
-# 				inter = BooleanOperationsUtils.ExecuteBooleanOperation(i, j, BooleanOperationsType.Intersect)
-# 				if inter.Volume != 0:
-# 					interBb = inter.GetBoundingBox()
-# 					interTrans = interBb.Transform
-# 					interPoint = interTrans.OfPoint(interBb.Min)
-# 					break
-# 			except:
-# 				"Oh god!"
-
-# 	try:
-# 		interPoint
-# 		return interPoint
-# 	except:
-# 		return None
-
-# def ColorElement(e):
-# 	ogs = OverrideGraphicSettings()
-# 	color = Color(255, 0, 0)
-# 	ogs.SetProjectionFillColor(color)
-# 	ogs.SetCutFillColor(color)
-# 	try:
-# 		fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "Uni")
-# 		fillPatternElement.GetFillPattern().IsSolidFill
-# 	except:
-# 		fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "<Remplissage de solide>")
-# 	ogs.SetProjectionFillPatternId(fillPatternElement.Id)
-# 	ogs.SetCutFillPatternId(fillPatternElement.Id)
-# 	ogs.SetSurfaceTransparency(50)
-# 	ogs.SetProjectionFillPatternVisible(True)
-# 	ogs.SetCutFillPatternVisible(True)
-# 	# t = Transaction(doc, 'Color element')
-# 	# t.Start()
-# 	doc.ActiveView.SetElementOverrides(e.Id, ogs)
-# 	# t.Commit()
-
-
-
-# cat_list = [BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctCurves,\
-# 			BuiltInCategory.OST_CableTray, BuiltInCategory.OST_FlexPipeCurves]
-
-# icatcollection = List[BuiltInCategory]()
-# for cat in cat_list:
-# 	icatcollection.Add(cat)
-
-# multiCatFilter = ElementMulticategoryFilter(icatcollection)
-
-# collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
-# 				.WherePasses(multiCatFilter)\
-# 				.WhereElementIsNotElementType()\
-# 				.ToElements()
-
-# t = Transaction(doc, 'Check RSO')
-# t.Start()
-# for e1 in collector:
-# 	try:
-# 		insulationId = InsulationLiningBase.GetInsulationIds(doc, e1.Id)[0]
-# 		e1 = doc.GetElement(insulationId)
-# 	except:
-# 		"e1 not insulated"
-
-# 	bb = e1.get_Geometry(options).GetBoundingBox()
-# 	trans = bb.Transform
-# 	outline = Outline(trans.OfPoint(bb.Min), trans.OfPoint(bb.Max))
-# 	bbFilter = BoundingBoxIntersectsFilter(outline)
-
-# 	totalFilter = LogicalAndFilter(multiCatFilter, bbFilter)
-
-# 	collector2 = FilteredElementCollector(doc, doc.ActiveView.Id)\
-# 					.WherePasses(totalFilter)\
-# 					.WhereElementIsNotElementType()\
-# 					.ToElements()
-
-# 	for e2 in collector2:
-# 		try:
-# 			insulationId2 = InsulationLiningBase.GetInsulationIds(doc, e2.Id)[0]
-# 			e2 = doc.GetElement(insulationId2)
-# 		except:
-# 			"e2 not insulated"
-# 		if e1.Id.IntegerValue != e2.Id.IntegerValue:
-# 			if get_intersection(e1, e2) is not None:
-# 				ColorElement(e1)
-# 				ColorElement(e2)
-
-# t.Commit()
-
-# # # # # Check RSO
-
-
-
-
-
-
-# # # # # Check BEAM
-
-# def get_solid(element):
-# 	solid_list = []
-# 	for i in element.get_Geometry(options):
-# 		if i.ToString() == "Autodesk.Revit.DB.Solid":
-# 			solid_list.append(i)
-# 		elif i.ToString() == "Autodesk.Revit.DB.GeometryInstance":
-# 			for j in i.GetInstanceGeometry():
-# 				if j.ToString() == "Autodesk.Revit.DB.Solid":
-# 					solid_list.append(j)
-# 	return solid_list
-
-# def get_intersection(el1, el2):
-# 	bb1 = el1.get_Geometry(options).GetBoundingBox()
-# 	bb2 = el2.get_Geometry(options).GetBoundingBox()
-
-# 	trans1 = bb1.Transform
-# 	trans2 = bb2.Transform
-
-# 	min1 = trans1.OfPoint(bb1.Min)
-# 	max1 = trans1.OfPoint(bb1.Max)
-# 	min2 = trans2.OfPoint(bb2.Min)
-# 	max2 = trans2.OfPoint(bb2.Max)
-
-# 	outline1 = Outline(min1, max1)
-# 	outline2 = Outline(min2, max2)
-
-# 	solid1_list = get_solid(el1)
-# 	solid2_list = get_solid(el2)
-
-# 	for i in solid1_list:
-# 		for j in solid2_list:
-# 			try:
-# 				inter = BooleanOperationsUtils.ExecuteBooleanOperation(i, j, BooleanOperationsType.Intersect)
-# 				if inter.Volume != 0:
-# 					interBb = inter.GetBoundingBox()
-# 					interTrans = interBb.Transform
-# 					interPoint = interTrans.OfPoint(interBb.Min)
-# 					break
-# 			except:
-# 				"Oh god!"
-
-# 	try:
-# 		interPoint
-# 		return interPoint
-# 	except:
-# 		return None
-
-# def ColorElement(e):
-# 	ogs = OverrideGraphicSettings()
-# 	color = Color(255, 0, 0)
-# 	ogs.SetProjectionFillColor(color)
-# 	ogs.SetCutFillColor(color)
-# 	try:
-# 		fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "Uni")
-# 		fillPatternElement.GetFillPattern().IsSolidFill
-# 	except:
-# 		fillPatternElement = FillPatternElement.GetFillPatternElementByName(doc, FillPatternTarget.Drafting, "<Remplissage de solide>")
-# 	ogs.SetProjectionFillPatternId(fillPatternElement.Id)
-# 	ogs.SetCutFillPatternId(fillPatternElement.Id)
-# 	ogs.SetSurfaceTransparency(50)
-# 	ogs.SetProjectionFillPatternVisible(True)
-# 	ogs.SetCutFillPatternVisible(True)
-# 	# t = Transaction(doc, 'Color element')
-# 	# t.Start()
-# 	doc.ActiveView.SetElementOverrides(e.Id, ogs)
-# 	# t.Commit()
-
-# def get_selected_elements(doc):
-#     try:
-#         # # Revit 2016
-#         return [doc.GetElement(id)
-#                 for id in __revit__.ActiveUIDocument.Selection.GetElementIds()]
-#     except:
-#         # # old method
-#         return list(__revit__.ActiveUIDocument.Selection.Elements)
-
-# STRcollector = FilteredElementCollector(doc, doc.ActiveView.Id)\
-# 				.OfCategory(BuiltInCategory.OST_StructuralFraming)\
-# 				.WhereElementIsNotElementType()\
-# 				.ToElements()
-
-# t = Transaction(doc, 'Check BEAM')
-# t.Start()
-# for e in STRcollector:
-# 	# e = get_selected_elements(doc)[0]
-
-# 	bb = e.get_Geometry(options).GetBoundingBox()
-# 	trans = bb.Transform
-# 	outline = Outline(trans.OfPoint(bb.Min), trans.OfPoint(bb.Max))
-# 	bbFilter = BoundingBoxIntersectsFilter(outline)
-
-# 	cat_list = [BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_DuctCurves,\
-# 				BuiltInCategory.OST_CableTray, BuiltInCategory.OST_FlexPipeCurves,\
-# 				BuiltInCategory.OST_PipeInsulations, BuiltInCategory.OST_DuctInsulations]
-# 	icatcollection = List[BuiltInCategory]()
-# 	for cat in cat_list:
-# 		icatcollection.Add(cat)
-# 	multiCatFilter = ElementMulticategoryFilter(icatcollection)
-
-# 	totalFilter = LogicalAndFilter(multiCatFilter, bbFilter)
-
-# 	collector = FilteredElementCollector(doc, doc.ActiveView.Id)\
-# 					.WherePasses(totalFilter)\
-# 					.WhereElementIsNotElementType()\
-# 					.ToElements()
-
-# 	for i in collector:
-# 		if get_intersection(e, i) is not None:
-# 			ColorElement(i)
-# t.Commit()
-
-# # # # # Check BEAM
 
 
 
@@ -1002,20 +945,3 @@ e = get_selected_elements(doc)[0]
 # t.Commit()
 # uidoc.RefreshActiveView()
 # # # TRY TO REFRESH BUBBLES IN VIEW LOOK THE BUILDING CODER
-
-
-
-
-# # # GET DEFAULT VALUE OF FAMILY SYMBOL BEFORE PLACING IT
-# el = get_selected_elements(doc)[0]
-
-# gm_collector = FilteredElementCollector(doc)\
-# 	.OfClass(FamilySymbol)\
-# 	.OfCategory(BuiltInCategory.OST_GenericModel)
-
-# for i in gm_collector:
-# 	print(i.get_Parameter(BuiltInParameter.INSTANCE_FREE_HOST_PARAM))
-# 	print(i.LevelId)
-
-# print(el.get_Parameter(BuiltInParameter.INSTANCE_FREE_HOST_PARAM).AsString())
-# # # GET DEFAULT VALUE OF FAMILY SYMBOL BEFORE PLACING IT

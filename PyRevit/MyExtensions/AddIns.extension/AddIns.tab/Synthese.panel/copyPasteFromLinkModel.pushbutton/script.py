@@ -105,7 +105,7 @@ if doc.ActiveView.GetType().ToString() == "Autodesk.Revit.DB.View3D":
 		outline = Outline(outmin, outmax)
 		bbFilter = BoundingBoxIntersectsFilter(outline)
 		
-	copy_list = ["All elements", "Ceilings", "Beams"]
+	copy_list = ["All elements", "Ceilings", "Beams", "Generic models", "Floors"]
 	res1 = forms.SelectFromList.show(copy_list,
 									title = "What do you want to copy?",
 									multiselect = False,
@@ -143,11 +143,40 @@ if doc.ActiveView.GetType().ToString() == "Autodesk.Revit.DB.View3D":
 			.WherePasses(bbFilter)\
 			.WhereElementIsNotElementType()\
 			.ToElementIds()
+	elif res1[0] == "Generic models":
+		element_collector = FilteredElementCollector(linkdoc)\
+			.OfCategory(BuiltInCategory.OST_GenericModel)\
+			.WherePasses(bbFilter)\
+			.WhereElementIsNotElementType()\
+			.ToElements()
+		elementId_collector = FilteredElementCollector(linkdoc)\
+			.OfCategory(BuiltInCategory.OST_GenericModel)\
+			.WherePasses(bbFilter)\
+			.WhereElementIsNotElementType()\
+			.ToElementIds()
+	elif res1[0] == "Floors":
+		element_collector = FilteredElementCollector(linkdoc)\
+			.OfCategory(BuiltInCategory.OST_Floors)\
+			.WherePasses(bbFilter)\
+			.WhereElementIsNotElementType()\
+			.ToElements()
+		elementId_collector = FilteredElementCollector(linkdoc)\
+			.OfCategory(BuiltInCategory.OST_Floors)\
+			.WherePasses(bbFilter)\
+			.WhereElementIsNotElementType()\
+			.ToElementIds()
 
 	for e in element_collector:
 		try:
-			if (e.ViewSpecific is True) or (e.Category.CategoryType.ToString() == "Annotation"):
+			if (e.ViewSpecific is True) or (e.Category.CategoryType.ToString() == "Annotation") or (e.Category.CategoryType.ToString() == "AnalyticalModel")\
+					or (e.Category.CategoryType.ToString() == "Internal") or (e.Category.CategoryType.ToString() == "Invalid") or (e.Category.Name == "Lignes"):
 				elementId_collector.Remove(e.Id)
+			# else:
+				# print(e.Category.Name)
+				# print(e.GetType().Name)
+				# print(e.Id)
+				# print(e.IsMonitoringLinkElement)
+				# print(e.IsMonitoringLocalElement)
 		except:
 			elementId_collector.Remove(e.Id)
 

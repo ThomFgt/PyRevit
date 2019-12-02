@@ -11,19 +11,20 @@ from System.Collections.Generic import List
 import Autodesk
 clr.AddReference('RevitAPI')
 clr.AddReference('RevitAPIUI')
-clr.AddReference('RevitNodes')
-clr.AddReference('RevitServices')
-import RevitServices
-from RevitServices.Persistence import DocumentManager
+# clr.AddReference('RevitNodes')
+# clr.AddReference('RevitServices')
+# import RevitServices
+# from RevitServices.Persistence import DocumentManager
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import *
-import Revit
-clr.ImportExtensions(Revit.Elements)
-from RevitServices.Transactions import TransactionManager
+# import Revit
+from rpw import revit, db, ui, DB, UI
+# clr.ImportExtensions(Revit.Elements)
+# from RevitServices.Transactions import TransactionManager
 from rpw.ui.forms import (select_file, Alert, TextInput, FlexForm, Label, ComboBox, TextBox, TextBox, Separator, Button, CommandLink, TaskDialog)
 
-doc = __revit__.ActiveUIDocument.Document
-uidoc = __revit__.ActiveUIDocument
+# doc = __revit__.ActiveUIDocument.Document
+# uidoc = __revit__.ActiveUIDocument
 
 commands = [CommandLink('OK', return_value = True), CommandLink('No, let me change my Excel please', return_value = False)]
 
@@ -39,9 +40,9 @@ if dialog.show():
     return ret
 
   # Get the Excel file
-  t = Transaction(doc, 'Read Excel spreadsheet.') 
-  t.Start()
-
+  # t = Transaction(doc, 'Read Excel spreadsheet.') 
+  # t.Start()
+with db.Transaction('read xl sheet'):
   #Accessing the Excel applications.
   try:
     xlApp = System.Runtime.InteropServices.Marshal.GetActiveObject('Excel.Application')
@@ -77,24 +78,24 @@ if dialog.show():
       array.append(XYZ(x,y,z))
     except:
       fails.append(str(r))
-  t.Commit()
+  # t.Commit()
 
-  commands = [CommandLink('OK', return_value = True), CommandLink('No, let me change my values please', return_value = False)]
+commands = [CommandLink('OK', return_value = True), CommandLink('No, let me change my values please', return_value = False)]
 
-  dialog = TaskDialog("Warning values unsupported", content = 'The units in Excel spreadsheet at lines : '+ ','.join(fails) + ' are not numbers', commands = commands)
+dialog = TaskDialog("Warning values unsupported", content = 'The units in Excel spreadsheet at lines : '+ ','.join(fails) + ' are not numbers', commands = commands)
 
-  if dialog.show():
-    Alert('Pick a slab please (clicking on it)', title = "Select a slab", exit = False)
-    # Pick an element
-    sel = uidoc.Selection
-    obType = Selection.ObjectType.Element
-    ref = sel.PickObject(obType, "Select Element.")
-    element = doc.GetElement(ref.ElementId)
+if dialog.show():
+  Alert('Pick a slab please (clicking on it)', title = "Select a slab", exit = False)
+  # Pick an element
+  sel = revit.uidoc.Selection
+  obType = Selection.ObjectType.Element
+  ref = sel.PickObject(obType, "Select Element.")
+  element = revit.doc.GetElement(ref.ElementId)
 
-    t = Transaction(doc, 'Points')
-    t.Start()
-
-    for p in array:
-      element.SlabShapeEditor.DrawPoint(p)
-    t.Commit()
+  # t = Transaction(doc, 'Points')
+  # t.Start()
+with db.Transaction('points'):
+  for p in array:
+    element.SlabShapeEditor.DrawPoint(p)
+  # t.Commit()
 
